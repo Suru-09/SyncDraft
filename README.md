@@ -4,25 +4,30 @@
 
 ## Modules
 
-- The main modules of our web application will be the server which will provide discovery in case of WebRTC and further bzl in case of the WebSockets approach. The second component will be the client which will have the communication specific modules and the text editor module.
+### Clients
 
-## Features that we can add to increase complexity after initial implementation.
+- multiple clients can modify one document at the same time
+- given that the session initiatior has an account, the document will be saved in the database
 
-- fallback on server.
-- user registration.
-- documents persistancy based on user login.(SQL/NOSQL database).
-- statistics through a Kafka broker shown in tools like Kibana/Grafana.
+### Server
 
-## Approaches
+- in order to establish a connection between two or more clients, we need a signaling server, which will run on the main server and with the help of the Stun & Turn server, it will provide a list of compatible peers
+- the server will be responsible to save the documents and miscellaneous information for the user
+- it will also provide statistics, logs and critical information for the analytical modules
 
-1. WebSockets -> OT(Operation Transform)
-    - advantages
-      - easier to implement initially.
-    - disadvantages 
-      - Big fat function hard to mathematically prove correcteness.(see papers)
-      - only correct OT's require a main server.
-      - the server can trace your data.
-2. WebRTC -> CmRDT(Communtative Replicated Data Types)
+### Analytics
+
+- the server will produce events that will be acknowledged by the kafka broker, which will further be consumed and written to the elasticsearch database
+- to get a better grasp of server's state, we will display the above mentioned infromation through grafana
+
+### Persistence
+
+- we will provide a caching mechanism to allow for a fast response 
+- we will also provide a fallback through the database in case the server can't establish a peer to peer connection
+
+## Document syncronizations
+
+- WebRTC -> CmRDT(Communtative Replicated Data Types)
     - advantages
       - given a reliable client you have data privacy.
       - lower ping.
@@ -30,8 +35,17 @@
     - disadvantages
       - STUN & TURN servers for peer discovery & relay(in case of TURN) caused by clients NATs.
 
-After considering our options we would like to implement the WebRTC version and provide the option to fallback on the server instead of a peer and document persistancy. Furthermore, as we value privacy we would like to offer the user the chance to use only peer to peer modes and persistancy to be completely turned off.
-
 ## Architecture
 
 ![arch](./docs/arch.png)
+
+## Technologies
+
+- Rust - backend consumer, server
+- Svelte - frontend
+- Mongo - database
+- Redis - cache
+- Kafka - message broker
+- Grafana - visualization
+- Elasticsearch - database for statistics
+- Coturn - stun & turn server
