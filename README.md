@@ -31,3 +31,7 @@
       - STUN & TURN servers for peer discovery & relay(in case of TURN) caused by clients NATs.
 
 After considering our options we would like to implement the WebRTC version and provide the option to fallback on the server instead of a peer and document persistancy. Furthermore, as we value privacy we would like to offer the user the chance to use only peer to peer modes and persistancy to be completely turned off.
+
+## Architecture
+
+![arch](./docs/arch.png)
