@@ -16,5 +16,9 @@
         color:cornflowerblue;
         font-family: 'Courier New', Courier, monospace;
         font-size: xx-large;
+        margin-left: 45%;
+    }
+    button {
+        margin-left: 48%;
     }
 </style>
