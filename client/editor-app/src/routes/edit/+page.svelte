@@ -1,5 +1,25 @@
+<script>
+    /**
+	 * @type {any}
+	 */
+    let textareaValue;
+
+    let cursorPosition;
+
+    /**
+	 * @param {any} event
+	 */
+    function onInputHandler(event) {
+        console.log(`data is ${event.data}`);
+        console.log(`textarea value is ${textareaValue}`);
+
+        cursorPosition = event.target.selectionStart;
+        console.log(`position is ${cursorPosition}`);
+    }
+</script>
+
 <main>
-    <textarea/>
+    <textarea on:input={onInputHandler} bind:value={textareaValue}/>
 </main>
 
 
