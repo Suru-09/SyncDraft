@@ -1,4 +1,6 @@
 <script>
+    import axios from 'axios';
+    
     /**
 	 * @type {any}
 	 */
@@ -9,12 +11,22 @@
     /**
 	 * @param {any} event
 	 */
-    function onInputHandler(event) {
+    async function onInputHandler(event) {
         console.log(`data is ${event.data}`);
         console.log(`textarea value is ${textareaValue}`);
 
         cursorPosition = event.target.selectionStart;
         console.log(`position is ${cursorPosition}`);
+
+        try {
+            const res = await axios.post(`http://localhost:8005/`, {
+                dt: event.data,
+                val: textareaValue,
+                pos: cursorPosition
+            });
+        } catch (e) {
+            console.log(`error: ${e}`);
+        }
     }
 </script>
 
