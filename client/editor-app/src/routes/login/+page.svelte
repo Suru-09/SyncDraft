@@ -1,15 +1,26 @@
 <script>
+    let isVisible = false;
+    
+    $: type = isVisible ? "text" : "password";
 
+    const toggleVisibility = () => {
+        isVisible = !isVisible;
+    };
 </script>
 
 <main>
+    <h1>SyncDraft</h1>
     <div>
         <h2>Username:</h2>
         <input>
     </div>
     <div>
         <h2>Password:</h2>
-        <input type="password">
+        <input {type}>
+    </div>
+    <div class="show_pass_div">
+        <input on:change={toggleVisibility} type=checkbox name="toggle" id="toggle">
+        <label for="toggle">Show password</label>    
     </div>
     <button>Login</button>
 </main>
@@ -32,6 +43,14 @@
     button {
         margin-top: 2%;
         margin-left: 47%;
+    }
+    .show_pass_div {
+        margin-top: 1%;
+    }
+    label {
+        color:cornflowerblue;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: large; 
     }
     h2 {
         color:cornflowerblue;

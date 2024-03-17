@@ -5,7 +5,7 @@
 
 <main>
     <h1>SyncDraft</h1>
-    <img src={Logo} alt="logo"/>
+    <img src={Logo} alt="logo" />
     {#if loggedIn}
         <h2>Welcome, </h2>
         <a href="/edit">

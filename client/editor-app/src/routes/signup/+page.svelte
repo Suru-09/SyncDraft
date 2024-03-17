@@ -1,5 +1,11 @@
 <script>
+    let isVisible = false;
+    
+    $: type = isVisible ? "text" : "password";
 
+    const toggleVisibility = () => {
+        isVisible = !isVisible;
+    };
 </script>
 
 <main>
@@ -10,7 +16,11 @@
     </div>
     <div>
         <h2>Password:</h2>
-        <input type="password">
+        <input {type}>
+    </div>
+    <div class="show_pass_div">
+        <input on:change={toggleVisibility} type=checkbox name="toggle" id="toggle">
+        <label for="toggle">Show password</label>    
     </div>
     <button>Create account</button>
 </main>
@@ -29,6 +39,14 @@
     }
     div {
         margin-left: 45%;
+    }
+    .show_pass_div {
+        margin-top: 1%;
+    }
+    label {
+        color:cornflowerblue;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: large; 
     }
     button {
         margin-top: 2%;
