@@ -6,6 +6,8 @@ use axum::{
 
 use serde::{Deserialize, Serialize};
 
+mod vtime;
+mod crdt;
 
 #[tokio::main]
 async fn main() {
