@@ -7,9 +7,13 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 mod crdt;
+mod mongo_wrapper;
+mod doc;
 
 #[tokio::main]
 async fn main() {
+
+    mongo_wrapper::mongo_wrap::MongoWrap::new().await;
     // initialize tracing
     tracing_subscriber::fmt::init();
 
