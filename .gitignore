@@ -14,5 +14,5 @@ Cargo.lock
 *.pdb
 
 # Ignore Svelte stuff
-.svelte-kit/** */
-client/editor-app/.svelte-kit/** */
+.svelte-kit/
+client/editor-app/.svelte-kit/
