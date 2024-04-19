@@ -1,5 +1,6 @@
 <script>
     import axios from 'axios';
+    import { backendUrl } from '../../config';
     
     /**
 	 * @type {any}
@@ -19,7 +20,7 @@
         console.log(`position is ${cursorPosition}`);
 
         try {
-            const res = await axios.post(`http://localhost:8005/`, {
+            const res = await axios.post(`${backendUrl}/edit`, {
                 dt: event.data,
                 val: textareaValue,
                 pos: cursorPosition

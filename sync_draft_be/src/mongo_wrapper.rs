@@ -95,12 +95,12 @@ mod tests {
         let result = mongo_wrap.insert_doc(test_doc.clone(), db_name.clone(), collection_name.clone()).await;
         println!("{:?}", result);
 
-        let deleteResult = mongo_wrap.delete_doc(uuid, db_name, collection_name).await;
-        println!("{:?}", result);
+        let delete_result = mongo_wrap.delete_doc(uuid, db_name, collection_name).await;
+        println!("{:?}", delete_result);
 
         // Assert
         assert!(result.is_ok());
-        assert!(deleteResult.is_ok());
+        assert!(delete_result.is_ok());
     }
 
     #[test]
@@ -131,8 +131,8 @@ mod tests {
         println!("{:?}", result);
 
         let uuid_vec = vec![uuid1.clone(), uuid2.clone()];
-        let deleteResult = mongo_wrap.delete_docs(uuid_vec, db_name, collection_name).await;
-        println!("{:?}", result);
+        let delete_result = mongo_wrap.delete_docs(uuid_vec, db_name, collection_name).await;
+        println!("{:?}", delete_result);
 
         // Assert
         assert!(result.is_ok());
