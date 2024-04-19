@@ -68,34 +68,34 @@ impl VTime {
 }
     
 
-pub type ORSet<'a> = Vec<(&'a str, VTime)>;
+pub type ORSet = Vec<(char, VTime)>;
 
-pub enum Command<'a> {
-    Add(&'a str),
-    Remove(&'a str),
+pub enum Command {
+    Add(char),
+    Remove(char),
 }
 
-pub enum Op<'a> {
-    Add(&'a str),
+pub enum Op {
+    Add(char),
     Remove(Vec<VTime>),
 }
 
-pub struct Crdt<'a> {
-    default: ORSet<'a>,
+pub struct Crdt {
+    default: ORSet,
 }
 
-impl<'a> Crdt<'a> {
+impl Crdt {
     pub fn new() -> Self {
         Crdt {
             default: Vec::new(),
         }
     }
 
-    pub fn query(&self, orset: &ORSet<'a>) -> Vec<&'a str> {
+    pub fn query(&self, orset: &ORSet) -> Vec<char> {
         orset.iter().map(|(item, _)| *item).collect()
     }
 
-    pub fn prepare(&self, orset: &ORSet<'a>, cmd: Command<'a>) -> Op<'a> {
+    pub fn prepare(&self, orset: &ORSet, cmd: Command) -> Op {
         match cmd {
             Command::Add(item) => Op::Add(item),
             Command::Remove(item) => {
@@ -107,7 +107,7 @@ impl<'a> Crdt<'a> {
         }
     }
 
-    pub fn effect(&self, orset: &mut ORSet<'a>, e: Op<'a>) {
+    pub fn effect(&self, orset: &mut ORSet, e: Op) {
         match e {
             Op::Add(item) => {
                 orset.push((item, VTime::new()));
@@ -161,22 +161,22 @@ mod tests {
     #[test]
     fn test_crdt_query() {
         let crdt = Crdt::new();
-        let orset = vec![("a", VTime::new()), ("b", VTime::new())];
-        assert_eq!(crdt.query(&orset), vec!["a", "b"]);
+        let orset = vec![('a'.clone(), VTime::new()), ('b'.clone(), VTime::new())];
+        assert_eq!(crdt.query(&orset), vec!['a', 'b']);
     }
 
     #[test]
     fn test_crdt_effect_add() {
-        let mut orset = vec![("a", VTime::new()), ("b", VTime::new())];
+        let mut orset = vec![('a', VTime::new()), ('b', VTime::new())];
         let crdt = Crdt::new();
-        let op = Op::Add("c");
+        let op = Op::Add('c');
         crdt.effect(&mut orset, op);
         assert_eq!(orset.len(), 3);
     }
 
     #[test]
     fn test_crdt_effect_remove() {
-        let mut orset = vec![("a", VTime::new()), ("b", VTime::new())];
+        let mut orset = vec![('a', VTime::new()), ('b', VTime::new())];
         let crdt = Crdt::new();
         let op = Op::Remove(vec![VTime::new()]);
         crdt.effect(&mut orset, op);
