@@ -1,6 +1,6 @@
 pub mod mongo_wrap {
 
-use mongodb::{bson::Uuid, bson::doc, options::ClientOptions, results::{DeleteResult, InsertManyResult, InsertOneResult}, Client, Database};
+use mongodb::{bson::Uuid, bson::doc, results::{DeleteResult, InsertManyResult, InsertOneResult}, Client};
 use std::env;
 
 use crate::doc::doc::Document;
@@ -67,7 +67,7 @@ impl MongoWrap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mongodb::bson::{uuid, Uuid};
+    use mongodb::bson::Uuid;
     use tokio::test;
     use mongo_wrap::MongoWrap;
     use crate::doc::doc::Document;
