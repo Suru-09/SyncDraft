@@ -58,6 +58,28 @@ pub mod user {
                 Err(_) => StatusCode::NOT_FOUND
             }
         }
+
+        pub async fn delete_user(Json(payload): Json<User>) -> StatusCode {
+            let hashed_pw =  match bcrypt::hash(payload.password) {
+                Ok(h_pw) => h_pw,
+                Err(_) => return StatusCode::FAILED_DEPENDENCY 
+            };
+
+            let user = User {
+                username: payload.username,
+                password: hashed_pw,
+            };
+
+            let mongo_wrap = MongoWrap::new().await;
+            let db_name = DB_NAME.to_string();
+            let collection_name = COLLECTION_NAME.to_string();
+
+            let result = mongo_wrap.delete_user(user, db_name, collection_name).await;
+            match result {
+                Ok(_) => StatusCode::OK,
+                Err(_) => StatusCode::NOT_FOUND
+            }
+        }
     }
 
 }

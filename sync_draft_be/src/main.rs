@@ -21,6 +21,7 @@ async fn main() {
         .route("/", get(root))
         .route("/user/create", post(User::create_user))
         .route("/user/login", post(User::verify_user))
+        .route("/user/delete", post(User::delete_user))
         .route("/doc/create", post(Document::create_doc))
         .route("/delete/doc", post(Document::delete_doc));
 

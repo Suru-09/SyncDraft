@@ -12,12 +12,14 @@
             <button>New Draft</button>
         </a>
     {:else}
-        <a href="/signup">
-            <button>Sign Up</button>
-        </a>
-        <a href="/login">
-            <button>Login</button>
-        </a>
+        <div class="signAndLogin">
+            <a href="/signup">
+                <button>Sign Up</button>
+            </a>
+            <a href="/login">
+                <button>Login</button>
+            </a>
+        </div> 
     {/if}
 </main>
 
@@ -29,26 +31,41 @@
         align-items: center;
     }
     img {
-        margin-left: 37%;
-        width: 410px;
-        height: 410px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 550px;
+        max-height: 550px;
+        width: 50%;
     }
     h1 {
         color:cornflowerblue;
         font-family: 'Courier New', Courier, monospace;
         font-size: xx-large;
-        margin-left: 45%;
+        text-align: center;
     }
     h2 {
         color:cornflowerblue;
         font-family: 'Courier New', Courier, monospace;
         font-size: xx-large;
-        margin-left: 45%;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 50%;
     }
+
+    .signAndLogin {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        max-width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
     button {
-        margin-top: 1%;
-        margin-left: 48%;
         width: 100px;
+        margin:0 20px;
         align-items: center;
         appearance: none;
         background-image: radial-gradient(100% 100% at 100% 0, #5adaff 0, #5468ff 100%);
@@ -68,7 +85,6 @@
         padding-left: 16px;
         padding-right: 16px;
         position: relative;
-        text-align: left;
         text-decoration: none;
         transition: box-shadow .15s,transform .15s;
         user-select: none;

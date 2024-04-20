@@ -3,9 +3,12 @@
 </script>
 
 <nav>
-    <a href="/">Home</a>
-	<a href="/edit">Editor</a>
-	<a href="/documents">Documents</a>
+	<div class="buttonsContainer">
+		<a href="/">Home</a>
+		<a href="/edit">Editor</a>
+		<a href="/documents">Documents</a>
+	</div>
+    
 </nav>
 
 
@@ -14,14 +17,17 @@
 		background-color: rgb(70, 7, 129);
 		display: flex; 
         justify-content: center;
-        align-items: center;
 		font-size: x-large;
 		color: aliceblue;
-		border-radius: 50;
-		
+	}
+
+	.buttonsContainer {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		width: 30%;
 	}
 	a {
-		margin-left: 5%;
 		text-decoration: solid;
 		color: cornflowerblue;
 		font-size: xx-large;

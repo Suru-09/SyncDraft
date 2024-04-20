@@ -78,6 +78,19 @@ impl MongoWrap {
         }
     }
 
+    pub async fn delete_user(&self, user: User, db_name: String, collection_name: String) -> Result<DeleteResult, mongodb::error::Error> {
+        let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
+        let db = client.database(&db_name);
+        let collection = db.collection::<User>(&collection_name);
+
+        let filter = doc! {
+            "username": user.username,
+            "password": bcrypt::hash(user.password).unwrap()
+        };
+
+        collection.delete_one(filter, None).await
+    }
+
 }
 
 }
