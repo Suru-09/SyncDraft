@@ -30,10 +30,24 @@ pub mod doc {
             let db_name = DB_NAME.to_string();
             let collection_name = COLLECTION_NAME.to_string();
             
-            let result = mongo_wrap.insert_doc(doc.clone(), db_name, collection_name).await;
+            let result = mongo_wrap.insert(doc.clone(), db_name, collection_name).await;
             match result {
                 Ok(_) => (StatusCode::CREATED, Json(doc)),
                 Err(_) => (StatusCode::UNPROCESSABLE_ENTITY, Json(doc))
+            }
+        }
+
+        pub async fn delete_doc(Json(payload): Json<DeleteDoc>) -> StatusCode {
+            let uuid = payload._id;
+
+            let mongo_wrap = MongoWrap::new().await;
+            let db_name = DB_NAME.to_string();
+            let collection_name = COLLECTION_NAME.to_string();
+
+            let result = mongo_wrap.delete_after_id(uuid, db_name, collection_name).await;
+            match result {
+                Ok(_) => StatusCode::CREATED,
+                Err(_) => StatusCode::UNPROCESSABLE_ENTITY
             }
         }
 
@@ -59,5 +73,8 @@ pub mod doc {
         update_c: char,
     }
 
-
+    #[derive(Serialize, Deserialize)]
+    pub struct DeleteDoc {
+        _id: Uuid,
+    }
 }
