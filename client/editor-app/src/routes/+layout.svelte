@@ -1,4 +1,5 @@
 <script>
+	import '../app.pcss';
 	let loggedIn = false;
 </script>
 
@@ -8,15 +9,15 @@
 		<a href="/edit">Editor</a>
 		<a href="/documents">Documents</a>
 	</div>
-    
 </nav>
 
+<slot />
 
 <style>
 	nav {
 		background-color: rgb(70, 7, 129);
-		display: flex; 
-        justify-content: center;
+		display: flex;
+		justify-content: center;
 		font-size: x-large;
 		color: aliceblue;
 	}
@@ -32,7 +33,7 @@
 		color: cornflowerblue;
 		font-size: xx-large;
 	}
-	a:hover{
+	a:hover {
 		color: black;
 	}
 	:global(body) {
@@ -40,5 +41,3 @@
 		background-color: rgb(25, 25, 49);
 	}
 </style>
-
-<slot />

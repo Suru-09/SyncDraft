@@ -1,6 +1,7 @@
 pub mod mongo_wrap {
 
-use mongodb::{bson::Uuid, bson::doc, results::{DeleteResult, InsertManyResult, InsertOneResult}, Client};
+use futures::TryStreamExt;
+use mongodb::{bson::{doc, Uuid}, options::SelectionCriteria, results::{DeleteResult, InsertManyResult, InsertOneResult}, Client};
 use serde::Serialize;
 use std::env;
 use pwhash::bcrypt;
@@ -89,6 +90,29 @@ impl MongoWrap {
         };
 
         collection.delete_one(filter, None).await
+    }
+
+    pub async fn get_docs_for_user(&self, doc_owner: String, db_name: String, collection_name: String) -> Result<Vec<Document>, mongodb::error::Error> {
+        let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
+        let db = client.database(&db_name);
+        let collection = db.collection::<Document>(&collection_name);
+
+        let mut cursor = match collection.find(doc! {"doc_owner": doc_owner}, None).await {
+            Ok(curs) => curs,
+            Err(er) => {
+                println!("Opening cursor failed with: {:?}", er);
+                return Err(er)
+            }
+        };
+
+        let mut docs = vec![];
+        docs.push(cursor.deserialize_current().unwrap());
+        while let Some(doc) = cursor.try_next().await? {
+            docs.push(doc);
+        }
+        println!("{:?}", docs);
+
+        Ok(docs)
     }
 
 }

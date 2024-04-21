@@ -25,7 +25,8 @@ async fn main() {
         .route("/user/login", post(User::verify_user))
         .route("/user/delete", post(User::delete_user))
         .route("/doc/create", post(Document::create_doc))
-        .route("/delete/doc", post(Document::delete_doc))
+        .route("/doc/delete", post(Document::delete_doc))
+        .route("/doc/get", get(Document::get_docs_for_user))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 

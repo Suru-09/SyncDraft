@@ -1,5 +1,5 @@
 pub mod doc {
-    use axum::Json;
+    use axum::{Json, extract::Query};
     use hyper::StatusCode;
     use serde::{Deserialize, Serialize};
     use mongodb::bson::{Uuid, doc};
@@ -51,12 +51,20 @@ pub mod doc {
             }
         }
 
-        // pub async fn update_doc(Json(payload): Json<UpdateDoc>) -> (StatusCode, Json<Document>) {
+        pub async fn get_docs_for_user(Query(payload): Query<GetDocs>) -> (StatusCode, Json<Vec<Document>>) {
+            let mongo_wrap = MongoWrap::new().await;
+            let db_name = DB_NAME.to_string();
+            let collection_name = COLLECTION_NAME.to_string();
 
-        //     let filter = doc! { "_id": payload._id };
-        //     let update = 
+            println!("{:?}", payload.doc_owner);
 
-        // }
+            let result = mongo_wrap.get_docs_for_user(payload.doc_owner, db_name, collection_name).await;
+            match result {
+                Ok(docs) => (StatusCode::OK, Json(docs)),
+                Err(_) => (StatusCode::UNPROCESSABLE_ENTITY, Json(vec![]))
+            }
+        }
+            
     }
 
 
@@ -76,5 +84,10 @@ pub mod doc {
     #[derive(Serialize, Deserialize)]
     pub struct DeleteDoc {
         _id: Uuid,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct GetDocs {
+        doc_owner: String
     }
 }
