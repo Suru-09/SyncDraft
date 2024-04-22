@@ -1,43 +1,36 @@
 <script>
 	import '../app.pcss';
-	let loggedIn = false;
+	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger } from 'flowbite-svelte';
+	import { DarkMode } from 'flowbite-svelte';
+	import Logo from "$lib/assets/logo.png"
+	let loggedIn = true;
+	let username = "Suru";
+
 </script>
 
 <nav>
-	<div class="buttonsContainer">
-		<a href="/">Home</a>
-		<a href="/edit">Editor</a>
-		<a href="/documents">Documents</a>
-	</div>
+	<Navbar>
+		<NavBrand href="/">
+		  <img src="{Logo}" class="size-16 mr-4" alt="SyncDraft Logo" />
+		  <span class="self-center whitespace-nowrap text-2xl font-bold dark:text-white">SyncDraft</span>
+		</NavBrand>
+		<NavHamburger/>
+		<NavUl ulClass="flex items-center space-x-4 text-xl">
+		  <NavLi href="/"> Home </NavLi>
+		  <NavLi href="/edit"> Editor </NavLi>
+		  <NavLi href="/documents"> Documents </NavLi>
+		  {#if loggedIn}
+			<p>Hello, {username}!</p>
+		  {:else}
+			<NavLi href="/signup"> Sign Up</NavLi>
+			<NavLi href="/login"> Login </NavLi>
+		  {/if}
+		  <NavLi> <DarkMode/> </NavLi>
+		</NavUl>
+	  </Navbar>
 </nav>
 
 <slot />
 
 <style>
-	nav {
-		background-color: rgb(70, 7, 129);
-		display: flex;
-		justify-content: center;
-		font-size: x-large;
-		color: aliceblue;
-	}
-
-	.buttonsContainer {
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		width: 30%;
-	}
-	a {
-		text-decoration: solid;
-		color: cornflowerblue;
-		font-size: xx-large;
-	}
-	a:hover {
-		color: black;
-	}
-	:global(body) {
-		overflow: hidden;
-		background-color: rgb(25, 25, 49);
-	}
 </style>
