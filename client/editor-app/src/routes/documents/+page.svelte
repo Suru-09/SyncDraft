@@ -12,6 +12,7 @@
     const previous = () => {
         alert('Previous btn clicked. Make a call to your server to fetch data.');
      };
+
     const next = () => {
         alert('Next btn clicked. Make a call to your server to fetch data.');
     }
@@ -39,7 +40,7 @@
 </script>
 
 <main class="bg-white dark:bg-gray-800">
-    <Table style="width: 95%; margin-top: 2rem; margin-left: auto; margin-right: auto;" striped={true}>
+    <Table style="width: 95%; margin-top: 3rem; margin-left: auto; margin-right: auto;" striped={true}>
         <TableHead>
             <TableHeadCell>Document Name</TableHeadCell>
             <TableHeadCell>Document Owner</TableHeadCell>
@@ -74,12 +75,12 @@
         Entries
     </div>
     
-    <Pagination table large>
-        <button type="button" slot="prev" on:click={previous} class="flex items-center gap-2 text-gray-900 bg-white dark:bg-gray-800">
+    <Pagination large>
+        <button type="button" slot="prev" on:click={previous} class="flex items-center gap-2 dark:text-white text-gray-900 bg-white dark:bg-gray-800">
             <ArrowLeftOutline class="w-3.5 h-3.5 me-2"/>
             Prev
         </button>
-        <button type="button" slot="next" on:click={next} class="flex items-center gap-2 text-gray-900 bg-white dark:bg-gray-800">
+        <button type="button" slot="next" on:click={next} class="flex items-center gap-2 dark:text-white text-gray-900 bg-white dark:bg-gray-800">
             Next
             <ArrowRightOutline class="w-6 h-6 me-2"/>
         </button>

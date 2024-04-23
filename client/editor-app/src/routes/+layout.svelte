@@ -9,7 +9,7 @@
 </script>
 
 <nav>
-	<Navbar>
+	<Navbar class="border-b">
 		<NavBrand href="/">
 		  <img src="{Logo}" class="size-16 mr-4" alt="SyncDraft Logo" />
 		  <span class="self-center whitespace-nowrap text-2xl font-bold dark:text-white">SyncDraft</span>
@@ -27,7 +27,7 @@
 		  {/if}
 		  <NavLi> <DarkMode/> </NavLi>
 		</NavUl>
-	  </Navbar>
+	</Navbar>
 </nav>
 
 <slot />
