@@ -1,28 +1,64 @@
 <script>
+    import {backendUrl} from '../../config.js';
+    import axios from 'axios';
+    import { loggedIn } from '../../stores.js';
+	import { goto } from '$app/navigation';
+
     let isVisible = false;
+    let usernameValue = "";
+    let passwordValue = "";
     
     $: type = isVisible ? "text" : "password";
 
     const toggleVisibility = () => {
         isVisible = !isVisible;
     };
+
+    async function onLogin() {
+        console.log(`username is ${usernameValue}`);
+        console.log(`pw is ${passwordValue}`);
+
+        try {
+            axios.post(`${backendUrl}/user/login`, {
+                username: usernameValue,
+                password: passwordValue,
+            }).then(response => {
+                console.log(response);
+                if (response) {
+                    $loggedIn = true;
+                    goto('/documents');
+                }
+            });
+        } catch (e) {
+            console.log(`error: ${e}`);
+        }
+    }
+
+    /**
+	 * @param {any} event
+    */
+    async function onPwInput(event) {
+        passwordValue = event.target.value;
+    }
 </script>
 
 <main>
     <h1>SyncDraft</h1>
     <div>
         <h2>Username:</h2>
-        <input>
+        <input bind:value={usernameValue}>
     </div>
     <div>
         <h2>Password:</h2>
-        <input {type}>
+        <input  {type } on:change={onPwInput} {...$$restProps} >
     </div>
     <div class="show_pass_div">
-        <input on:change={toggleVisibility} type=checkbox name="toggle" id="toggle">
+        <input on:change={toggleVisibility}
+            type=checkbox name="toggle" id="toggle"
+        >
         <label for="toggle">Show password</label>    
     </div>
-    <button>Login</button>
+    <button on:click={onLogin}>Login</button>
 </main>
 
 <style>
