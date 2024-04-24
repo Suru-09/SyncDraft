@@ -36,7 +36,7 @@
 
     let isTextareaFocused = false
 
-    let userNames = ['Jese Leos', 'John Doe', 'Jane Smith', 'dada', 'dada', 'dada', 'wtf'];
+    let userNames = ['Suru', 'John Doe', 'Jane Smith', 'dada', 'dada', 'dada', 'wtf'];
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
     let index = 0;
@@ -51,20 +51,73 @@
     ];
 
     function handleTextareaFocus() {
-        isTextareaFocused = true;
+        isTextareaFocused = !isTextareaFocused;
     }
 
     function handleTextareaBlur() {
         isTextareaFocused = false;
     }
 
+    /**
+    * @param {any} event
+    */
+    function getCursor(event) {
+        let x = event.clientX;
+        let y = event.clientY;
+        let _position = `Suru`;
+
+        const editorElement = document.getElementById('editor');
+        const infoElement = document.getElementById('info');
+        if (infoElement && editorElement) {
+            const editorRect = editorElement.getClientRects();
+            const rect = editorRect.length == 1 ? editorRect[0] : null;
+
+            if (rect) {
+                console.log(pointInRect(x, y, rect));
+            }
+            
+            if (rect && pointInRect(x, y, rect)) {
+                infoElement.innerHTML = _position;
+                infoElement.style.top = y + "px";
+                infoElement.style.left = x + "px";
+            }
+
+            if (!isTextareaFocused) {
+                infoElement.style.visibility = "hidden";
+            }
+            else {
+                infoElement.style.visibility = "visible";
+            }
+        }
+    }
+
+    /**
+    * @param {number} x
+    * @param {number} y
+    * @param {DOMRect} rect
+    */
+    const pointInRect = (x, y, rect) => {
+        console.log("Sanity check");
+        console.log(`x: ${x}, y: ${y} and rect: l: ${rect?.left} r: ${rect?.right} t: ${rect?.top} b: ${rect?.bottom}`);
+        if (x > rect.right || x < rect.left) {
+            return false;
+        }
+        
+        if ( y > rect.bottom || y < rect.top) {
+            return false;
+        }
+
+        return true;
+    }
+
 </script>
 
 <main>
-    <div class="text-container">
+    <div class="text-container" on:click={getCursor} id="demo" role="button" tabindex="0">
         <form class="w-3/5">
             <label for="editor" class="sr-only">Publish post</label>
-            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something">
+            <div id="info"></div>
+            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" on:focus={handleTextareaFocus} on:blur={handleTextareaBlur}>
               <Toolbar slot="header" embedded>
                 <ToolbarGroup>
                     <Input type="text" id="doc_name" placeholder="Document name" required />
@@ -87,15 +140,6 @@
             {/each}
         </Listgroup>
     </div>
-
-    {#if isTextareaFocused}
-        {#each cursors as cursor}
-            <div style="position: relative; top: {cursor.position}px;">
-                <span style="position: absolute; left: 0; color: {cursor.color}; font-weight: bold;">{cursor.username}</span>
-                <span style="position: absolute; left: 0; width: 2px; background-color: {cursor.color}; height: 100%;"></span>
-            </div>
-        {/each}
-    {/if}
 </main>
 
 
@@ -110,5 +154,23 @@
         justify-content: space-evenly;
         margin-top: 2rem;
         height: 100%;
+    }
+
+    #demo {
+        height: 100%;
+        width: 100%;
+        background-color: #222831;
+    }
+
+    #info {
+        padding-left: 10px;
+        border-radius: 10px;
+        position: absolute;
+        user-select: none;
+        font-size: 1em;
+        text-align: center;
+        width: 45px;
+        color: #EEEEEE;
+        background-color: #FD7013;
     }
 </style>
