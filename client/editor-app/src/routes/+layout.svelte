@@ -1,10 +1,15 @@
 <script>
 	import '../app.pcss';
-	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger } from 'flowbite-svelte';
+	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button } from 'flowbite-svelte';
 	import { DarkMode } from 'flowbite-svelte';
+	import { loggedIn } from '../stores.js';
+	import { ArrowLeftToBracketOutline } from 'flowbite-svelte-icons';
 	import Logo from "$lib/assets/logo.png"
-	let loggedIn = true;
 	let username = "Suru";
+
+	const logout = () => {
+		$loggedIn = false;
+	}
 
 </script>
 
@@ -16,11 +21,16 @@
 		</NavBrand>
 		<NavHamburger/>
 		<NavUl ulClass="flex items-center space-x-4 text-xl">
-		  <NavLi href="/"> Home </NavLi>
 		  <NavLi href="/edit"> Editor </NavLi>
 		  <NavLi href="/documents"> Documents </NavLi>
-		  {#if loggedIn}
+		  {#if $loggedIn}
 			<p>Hello, {username}!</p>
+			<NavLi>
+				<Button color="alternative" class="outline-none border-hidden border-transparent focus:border-transparent focus:ring-0" on:click={logout}>
+					<span class="self-center font-normal text-xl whitespace-nowrap mr-3"> Log out </span>
+					<ArrowLeftToBracketOutline/>
+				</Button>
+			</NavLi>
 		  {:else}
 			<NavLi href="/signup"> Sign Up</NavLi>
 			<NavLi href="/login"> Login </NavLi>

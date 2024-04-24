@@ -1,6 +1,8 @@
 <script>
     import {backendUrl} from '../../config.js';
     import axios from 'axios';
+    import { loggedIn } from '../../stores.js';
+	import { goto } from '$app/navigation';
 
     let isVisible = false;
     let usernameValue = "";
@@ -22,6 +24,10 @@
                 password: passwordValue,
             }).then(response => {
                 console.log(response);
+                if (response) {
+                    $loggedIn = true;
+                    goto('/documents');
+                }
             });
         } catch (e) {
             console.log(`error: ${e}`);
