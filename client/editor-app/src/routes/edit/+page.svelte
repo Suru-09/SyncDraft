@@ -6,35 +6,36 @@
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
     import { TrashBinSolid } from 'flowbite-svelte-icons';
     
-    /**
-	 * @type {any}
-	 */
-    let textareaValue;
+    // /**
+	//  * @type {any}
+	//  */
+    // let textareaValue;
 
-    let cursorPosition;
+    // let cursorPosition;
 
-    /**
-	 * @param {any} event
-    */
-    async function onInputHandler(event) {
-        console.log(`data is ${event.data}`);
-        console.log(`textarea value is ${textareaValue}`);
+    // /**
+	//  * @param {any} event
+    // */
+    // async function onInputHandler(event) {
+    //     console.log(`data is ${event.data}`);
+    //     console.log(`textarea value is ${textareaValue}`);
 
-        cursorPosition = event.target.selectionStart;
-        console.log(`position is ${cursorPosition}`);
+    //     cursorPosition = event.target.selectionStart;
+    //     console.log(`position is ${cursorPosition}`);
 
-        try {
-            const res = await axios.post(`${backendUrl}/edit`, {
-                dt: event.data,
-                val: textareaValue,
-                pos: cursorPosition
-            });
-        } catch (e) {
-            console.log(`error: ${e}`);
-        }
-    }
+    //     try {
+    //         const res = await axios.post(`${backendUrl}/edit`, {
+    //             dt: event.data,
+    //             val: textareaValue,
+    //             pos: cursorPosition
+    //         });
+    //     } catch (e) {
+    //         console.log(`error: ${e}`);
+    //     }
+    // }
 
     let isTextareaFocused = false
+    let cursorPosition = { start: 0, end: 0 };
 
     let userNames = ['Suru', 'John Doe', 'Jane Smith', 'dada', 'dada', 'dada', 'wtf'];
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
@@ -66,20 +67,30 @@
         let y = event.clientY;
         let _position = `Suru`;
 
+        let index_x = event.target.selectionStart;
+
+        const lineHeight = parseFloat(getComputedStyle(event.target).lineHeight);
+        const linesBeforeCursor = event.target.value.substr(0, index_x).split('\n').length - 1;
+
+        let index_y = linesBeforeCursor * lineHeight;
+
+
         const editorElement = document.getElementById('editor');
         const infoElement = document.getElementById('info');
         if (infoElement && editorElement) {
             const editorRect = editorElement.getClientRects();
             const rect = editorRect.length == 1 ? editorRect[0] : null;
 
+            
             if (rect) {
                 console.log(pointInRect(x, y, rect));
+
             }
             
             if (rect && pointInRect(x, y, rect)) {
                 infoElement.innerHTML = _position;
-                infoElement.style.top = y + "px";
-                infoElement.style.left = x + "px";
+                infoElement.style.top = rect.top + index_y + "px";
+                infoElement.style.marginLeft = index_x  + "px";
             }
 
             if (!isTextareaFocused) {
@@ -113,11 +124,11 @@
 </script>
 
 <main>
-    <div class="text-container" on:mousemove={getCursor} id="demo" role="button" tabindex="0">
+    <div class="text-container"id="demo" role="button" tabindex="0">
         <form class="w-3/5">
             <label for="editor" class="sr-only">Publish post</label>
             <div id="info"></div>
-            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}>
+            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px" on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}>
               <Toolbar slot="header" embedded>
                 <ToolbarGroup>
                     <Input type="text" id="doc_name" placeholder="Document name" required />
