@@ -51,7 +51,7 @@
     ];
 
     function handleTextareaFocus() {
-        isTextareaFocused = !isTextareaFocused;
+        isTextareaFocused = true;
     }
 
     function handleTextareaBlur() {
@@ -113,11 +113,11 @@
 </script>
 
 <main>
-    <div class="text-container" on:click={getCursor} id="demo" role="button" tabindex="0">
+    <div class="text-container" on:mousemove={getCursor} id="demo" role="button" tabindex="0">
         <form class="w-3/5">
             <label for="editor" class="sr-only">Publish post</label>
             <div id="info"></div>
-            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" on:focus={handleTextareaFocus} on:blur={handleTextareaBlur}>
+            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}>
               <Toolbar slot="header" embedded>
                 <ToolbarGroup>
                     <Input type="text" id="doc_name" placeholder="Document name" required />
@@ -159,7 +159,6 @@
     #demo {
         height: 100%;
         width: 100%;
-        background-color: #222831;
     }
 
     #info {
