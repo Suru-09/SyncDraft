@@ -2,7 +2,7 @@
     import axios from 'axios';
     import { backendUrl } from '../../config';
     import { Textarea, Toolbar, ToolbarGroup, ToolbarButton, Button, Input, Label } from 'flowbite-svelte';
-    import { PaperClipOutline, MapPinAltSolid, ImageOutline, CodeOutline, FaceGrinOutline, PaperPlaneOutline } from 'flowbite-svelte-icons';
+    import { PaperClipOutline, MapPinAltSolid, ImageOutline, CodeOutline, FaceGrinOutline, PaperPlaneOutline, GlobeOutline } from 'flowbite-svelte-icons';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
     import { TrashBinSolid } from 'flowbite-svelte-icons';
     
@@ -34,8 +34,7 @@
     //     }
     // }
 
-    let isTextareaFocused = false
-    let cursorPosition = { start: 0, end: 0 };
+    let isTextareaFocused = false;
 
     let userNames = ['Suru', 'John Doe', 'Jane Smith', 'dada', 'dada', 'dada', 'wtf'];
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
@@ -67,10 +66,21 @@
         let y = event.clientY;
         let _position = `Suru`;
 
-        let index_x = event.target.selectionStart;
+        let index_x = event.target.selectionEnd;
 
         const lineHeight = parseFloat(getComputedStyle(event.target).lineHeight);
         const linesBeforeCursor = event.target.value.substr(0, index_x).split('\n').length - 1;
+        const lastLine = event.target.value.substr(0, index_x).split('\n')[linesBeforeCursor];
+
+        const font = getComputedStyle(event.target).font;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (context)
+        {
+            context.font = font;
+            index_x = context.measureText(lastLine).width;
+        }
+
 
         let index_y = linesBeforeCursor * lineHeight;
 
@@ -86,20 +96,43 @@
                 console.log(pointInRect(x, y, rect));
 
             }
+            else{
+                console.log("Editor rectangle is null");
+            }
             
-            if (rect && pointInRect(x, y, rect)) {
+            let padding_left = infoElement.clientWidth * 3/4;
+            let padding_up = infoElement.clientHeight / 2;
+
+            if (rect && pointInRect(x, y, rect)) { // set label new position
                 infoElement.innerHTML = _position;
-                infoElement.style.top = rect.top + index_y + "px";
-                infoElement.style.marginLeft = index_x  + "px";
+                infoElement.style.top = rect.top + index_y + padding_up + "px";
+                infoElement.style.marginLeft = index_x + padding_left  + "px";
             }
 
-            if (!isTextareaFocused) {
+            if (rect && ((rect.top + index_y + padding_up) >= rect.bottom)) // make label stop at end of textarea
+            {
+                infoElement.style.top = rect.bottom - lineHeight + "px";
+            }
+
+            if ( event.key === 'Enter' || event.key === '\r') // make label stop at end of textarea
+            {
+                infoElement.style.marginLeft = padding_left + "px";
+                getLine(event);
+            }
+            if ( event.keyCode === 8)
+            {
+                getLine(event);
+            }
+
+            if (!isTextareaFocused) { // toggle label visibility when textarea is in focuse
                 infoElement.style.visibility = "hidden";
             }
             else {
                 infoElement.style.visibility = "visible";
             }
         }
+
+        getColumn(event);
     }
 
     /**
@@ -121,6 +154,30 @@
         return true;
     }
 
+
+    let line = 0 ;
+    /**
+    * @param {any} event
+    */
+    function getLine(event)
+    {
+        let textarea = event.target;
+        line = textarea.value.substr(0, textarea.selectStart).split('\n').length;
+    }
+
+    let column = 0 ;
+    /**
+    * @param {any} event
+    */
+    function getColumn(event)
+    {
+        let textarea = event.target;
+        const linesBeforeCursor = textarea.value.substr(0, textarea.selectionStart).split('\n').length - 1;
+        const lastLine = textarea.value.substr(0, textarea.selectionStart).split('\n')[linesBeforeCursor];
+        column = lastLine.length + 1;
+
+    }
+
 </script>
 
 <main>
@@ -128,7 +185,8 @@
         <form class="w-3/5">
             <label for="editor" class="sr-only">Publish post</label>
             <div id="info"></div>
-            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px" on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}>
+            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
+                on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}>
               <Toolbar slot="header" embedded>
                 <ToolbarGroup>
                     <Input type="text" id="doc_name" placeholder="Document name" required />
@@ -138,7 +196,10 @@
                 </ToolbarGroup>
               </Toolbar>
             </Textarea>
-            <Button>Save document</Button>
+            <div>
+                <p class="numerics">Line: {line} | Column: {column}</p>
+                <Button>Save document</Button>
+            </div>
         </form>
 
         <Listgroup active class="w-48">
@@ -182,5 +243,12 @@
         width: 45px;
         color: #EEEEEE;
         background-color: #FD7013;
+    }
+
+    .numerics {
+        color: #EEEEEE;
+        font-size: 1em;
+        position: relative;
+        float: right;
     }
 </style>
