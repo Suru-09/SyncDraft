@@ -1,5 +1,6 @@
 <script>
 	import '../app.pcss';
+	import { page } from '$app/stores';
 	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button } from 'flowbite-svelte';
 	import { DarkMode } from 'flowbite-svelte';
 	import { loggedIn } from '../stores.js';
@@ -11,6 +12,8 @@
 		$loggedIn = false;
 	}
 
+	
+	$: activeUrl = $page.url.pathname;
 </script>
 
 <nav>
@@ -20,7 +23,7 @@
 		  <span class="self-center whitespace-nowrap text-2xl font-bold dark:text-white">SyncDraft</span>
 		</NavBrand>
 		<NavHamburger/>
-		<NavUl ulClass="flex items-center space-x-4 text-xl">
+		<NavUl {activeUrl} ulClass="flex items-center space-x-4 text-xl">
 		  <NavLi href="/edit"> Editor </NavLi>
 		  <NavLi href="/documents"> Documents </NavLi>
 		  {#if $loggedIn}
