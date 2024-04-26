@@ -38,7 +38,7 @@
 </script>
 
 <main>
-    <form class="flex flex-col w-1/2 self-center ml-auto mr-auto mt-12">
+    <form class="flex flex-col w-1/2 self-center ml-auto mr-auto mt-6 mb-6">
         <div class="grid gap-6 mb-6 md:grid-cols-2">
           <div>
             <Label for="first_name" class="mb-2">First name</Label>
