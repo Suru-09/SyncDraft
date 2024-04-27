@@ -1,13 +1,16 @@
 <script>
     import {backendUrl} from '../../config.js';
     import axios from 'axios';
-    import { loggedIn } from '../../stores.js';
+    import { loggedIn, loggedUser } from '../../stores.js';
 	import { goto } from '$app/navigation';
-    import { Button, Label, Input, ButtonGroup, InputAddon, ToolbarButton } from 'flowbite-svelte';
-    import { EyeOutline, EyeSlashOutline } from 'flowbite-svelte-icons';
+    import { Button, Label, Input, Alert } from 'flowbite-svelte';
+    import { EyeOutline, EyeSlashOutline, InfoCircleSolid } from 'flowbite-svelte-icons';
     import { EnvelopeSolid } from 'flowbite-svelte-icons';
 
     let isVisible = false;
+    let wrongPasswordIntroduced = false;
+
+
     let usernameValue = "";
     let passwordValue = "";
 
@@ -15,20 +18,32 @@
         console.log(`username is ${usernameValue}`);
         console.log(`pw is ${passwordValue}`);
 
-        try {
-            axios.post(`${backendUrl}/user/login`, {
-                username: usernameValue,
-                password: passwordValue,
-            }).then(response => {
-                console.log(response);
-                if (response) {
-                    $loggedIn = true;
-                    goto('/documents');
-                }
-            });
-        } catch (e) {
-            console.log(`error: ${e}`);
-        }
+        axios.post(`${backendUrl}/user/login`, {
+            username: usernameValue,
+            password: passwordValue,
+        }).then(response => {
+            console.log(response);
+            if (response.status == 200) {
+                $loggedIn = true;
+                $loggedUser.firstName = response.data.first_name;
+                $loggedUser.lastName = response.data.last_name;
+                $loggedUser.password = response.data.password;
+                $loggedUser.username = response.data.username;
+                
+                // nice to see your documents once you have logged in.
+                // note: cannot use goto, because it does not refresh
+                // the page
+                //goto('/documents');
+                // reload is used because other pages could depend on
+                // local storage values.
+                location.assign('/documents');
+            }
+        }).catch((error) => {
+            console.log(error);
+            if (error.response.status == 404 || error.response.status == 401) {
+                wrongPasswordIntroduced = true;
+            }
+        });
     }
 
     /**
@@ -69,7 +84,15 @@
             {/if}
             </button>
         </Input>
+            {#if wrongPasswordIntroduced}
+                <Alert color="red">
+                    <InfoCircleSolid slot="icon" class="w-4 h-4" />
+                    <span class="font-medium">Wrong password!</span>
+                    Try to introduce the password again.
+                </Alert>
+            {/if}
     </div>
+
 
     <Button type="submit" class="w-1/2 align-center m-auto" on:click={onLogin}>Submit</Button>
     </div>

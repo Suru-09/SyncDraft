@@ -1,33 +1,57 @@
 <script>
     import { onMount } from 'svelte';
     import { backendUrl } from '../../config';
-    import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
+    import { Table, TableBody, TableBodyCell, TableBodyRow,
+         TableHead, TableHeadCell, Pagination 
+    } from 'flowbite-svelte';
     import axios from 'axios';
-    import {TrashBinOutline, EditOutline } from 'flowbite-svelte-icons';
-    import { Pagination } from 'flowbite-svelte';
-    import { ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
-	import { inputClass, labelClass } from 'flowbite-svelte/Radio.svelte';
+    import {TrashBinOutline, EditOutline, ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
+    import { userDocuments, loggedUser } from '../../stores';
 
-    let helper = { start: 1, end: 10, total: 100 };
+    let pageSize = 10;
+    let currentDocsBodySize = 40;
+    let helper = { start: 1, end: pageSize, total: 100 };
     const previous = () => {
-        //alert('Previous btn clicked. Make a call to your server to fetch data.');
+        if (helper.start - pageSize >= 1)
+        {
+            helper.start -= pageSize;
+            helper.end -= pageSize;
+        }
+        currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
      };
 
     const next = () => {
-        //alert('Next btn clicked. Make a call to your server to fetch data.');
+        if (helper.start + pageSize <= helper.total)
+        {
+            helper.end += pageSize;
+            helper.start += pageSize;
+        }
+        currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
     }
 
+    const trimDocsBody = () => {
+        currentDocs.forEach((doc) => {
+            doc.body = doc.body.slice(0, currentDocsBodySize);
+        });
+    }
 
-    let documents = [{"doc_name": "", "doc_owner": "", "body": ""}];
+    let currentDocs = [];
 
     async function fetchDocuments() {
         try {
             const params = {
-                doc_owner: "Suru",
+                doc_owner: $loggedUser.username,
             };
             const response = await axios.get(`${backendUrl}/doc/get`, {params});
             console.log(response);
-            documents = response.data;
+            $userDocuments = response.data;
+            console.log($userDocuments);
+            currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
+            console.log(currentDocs.body);
+            trimDocsBody();
+            console.log(currentDocs.body);
+            helper.total = $userDocuments.length;
+            helper.end = Math.min(helper.total, helper.end);
         } catch (error) {
             console.error('Error fetching documents:', error);
         }
@@ -35,6 +59,7 @@
 
     // Call the fetch function when the component mounts
     onMount(() => {
+        $userDocuments = [];
         fetchDocuments();
     });
 </script>
@@ -49,7 +74,7 @@
             <TableHeadCell>Delete</TableHeadCell>
         </TableHead>
         <TableBody tableBodyClass="divide-y">
-            {#each documents as document}
+            {#each currentDocs as document}
                 <TableBodyRow>
                     <TableBodyCell>{document.doc_name}</TableBodyCell>
                     <TableBodyCell>{document.doc_owner}</TableBodyCell>

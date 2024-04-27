@@ -6,6 +6,12 @@ export const username = writable("");
 export const loggedUser = persisted('loggedUser', {
     "firstName": "",
     "lastName": "",
-    "email": "",
+    "username": "",
     "password": ""
-})
+});
+export const userDocuments = writable([{
+    "_id": "",
+    "doc_name": "",
+    "doc_owner": "",
+    "body": "",
+}]);

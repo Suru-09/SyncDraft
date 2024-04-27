@@ -1,12 +1,12 @@
 pub mod mongo_wrap {
 
-use futures::TryStreamExt;
+use futures::{TryFutureExt, TryStreamExt};
 use mongodb::{bson::{doc, Uuid}, options::SelectionCriteria, results::{DeleteResult, InsertManyResult, InsertOneResult}, Client};
 use serde::Serialize;
 use std::env;
 use pwhash::bcrypt;
 
-use crate::{doc::doc::Document, user::user::User};
+use crate::{doc::doc::Document, user::user::{LoginUser, User}};
 
 pub struct MongoWrap {
     pub mongodb_uri: String,
@@ -49,6 +49,17 @@ impl MongoWrap {
         None).await
     }
     
+    pub async fn number_of_docs_for_user(&self, doc_owner: String, db_name: String, collection_name: String) -> Result<u64, mongodb::error::Error> {
+        let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
+        let db = client.database(&db_name);
+        let collection = db.collection::<Document>(&collection_name);
+
+        collection.count_documents(doc! {
+            "doc_owner": doc_owner
+        },
+        None).await
+    }
+
     pub async fn delete_many_after_id(&self, uuids: Vec<Uuid>, db_name: String, collection_name: String) -> Result<DeleteResult, mongodb::error::Error> {
         let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
         let db = client.database(&db_name);
@@ -62,24 +73,34 @@ impl MongoWrap {
         None).await
     }
 
-    pub async fn user_exists(&self, user: User, db_name: String, collection_name: String) -> Result<bool, mongodb::error::Error> {
+    pub async fn user_exists(&self, user: LoginUser, db_name: String, collection_name: String) -> Result<User, mongodb::error::Error> {
         let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
         let db = client.database(&db_name);
         let collection = db.collection::<User>(&collection_name);
 
         let filter = doc! {
             "username": user.username,
-            "password": bcrypt::hash(user.password).unwrap()
         };
 
-        let result = collection.find(filter, None).await;
+        let result = collection.find_one(filter, None).await;
         match result {
-            Ok(_) => Ok(true),
+            Ok(option_user) => {
+                println!("{:?}", option_user);
+                let db_user = option_user.unwrap();
+                let verify = bcrypt::verify(user.password.clone(), &db_user.password);
+                if verify == true
+                {
+                    return Ok(db_user)
+                }
+                else {
+                    return Err(mongodb::error::Error::custom("WRONG_PASSWORD"))
+                }
+            },
             Err(str) => Err(str)
         }
     }
 
-    pub async fn delete_user(&self, user: User, db_name: String, collection_name: String) -> Result<DeleteResult, mongodb::error::Error> {
+    pub async fn delete_user(&self, user: LoginUser, db_name: String, collection_name: String) -> Result<DeleteResult, mongodb::error::Error> {
         let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
         let db = client.database(&db_name);
         let collection = db.collection::<User>(&collection_name);
