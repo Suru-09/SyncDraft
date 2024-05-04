@@ -1,31 +1,56 @@
 <script>
     import {backendUrl} from '../../config.js';
     import axios from 'axios';
+    import { loggedIn, loggedUser } from '../../stores.js';
+	import { goto } from '$app/navigation';
+    import { Button, Label, Input, Alert } from 'flowbite-svelte';
+    import { EyeOutline, EyeSlashOutline, InfoCircleSolid } from 'flowbite-svelte-icons';
+    import { EnvelopeSolid } from 'flowbite-svelte-icons';
 
     let isVisible = false;
+    let wrongPasswordIntroduced = false;
+
+
     let usernameValue = "";
     let passwordValue = "";
-    
-    $: type = isVisible ? "text" : "password";
-
-    const toggleVisibility = () => {
-        isVisible = !isVisible;
-    };
 
     async function onLogin() {
         console.log(`username is ${usernameValue}`);
         console.log(`pw is ${passwordValue}`);
 
-        try {
-            axios.post(`${backendUrl}/user/login`, {
-                username: usernameValue,
-                password: passwordValue,
-            }).then(response => {
-                console.log(response);
-            });
-        } catch (e) {
-            console.log(`error: ${e}`);
-        }
+        axios.post(`${backendUrl}/user/login`, {
+            username: usernameValue,
+            password: passwordValue,
+        }).then(response => {
+            console.log(response);
+            if (response.status == 200) {
+                $loggedIn = true;
+                $loggedUser.firstName = response.data.first_name;
+                $loggedUser.lastName = response.data.last_name;
+                $loggedUser.password = response.data.password;
+                $loggedUser.username = response.data.username;
+                
+                // nice to see your documents once you have logged in.
+                // note: cannot use goto, because it does not refresh
+                // the page
+                //goto('/documents');
+                // reload is used because other pages could depend on
+                // local storage values.
+                location.assign('/documents');
+            }
+        }).catch((error) => {
+            console.log(error);
+            if (error.response.status == 404 || error.response.status == 401) {
+                wrongPasswordIntroduced = true;
+            }
+        });
+    }
+
+    /**
+	 * @param {any} event
+    */
+    const handleUserEmail = (event) => {
+        usernameValue = event.target.value;
     }
 
     /**
@@ -34,99 +59,54 @@
     async function onPwInput(event) {
         passwordValue = event.target.value;
     }
+
 </script>
 
 <main>
-    <h1>SyncDraft</h1>
+    <div class="login-container">
+    <Label class="mb-2">Email</Label>
+    <Input type="email" placeholder="username@something.com" on:input={handleUserEmail}>
+        <EnvelopeSolid slot="left" class="w-4 h-4" />
+    </Input>
     <div>
-        <h2>Username:</h2>
-        <input bind:value={usernameValue}>
+        <Label for="show-password" class="mb-2">Your password</Label>
+        <Input on:input={onPwInput} id="show-password" 
+                type={isVisible ? 'text' : 'password'} placeholder="Your password here"
+                class="mb-2"
+            >
+            <button slot="left" on:click={() => (isVisible = !isVisible)}
+                 class="pointer-events-auto"
+            >
+            {#if isVisible}
+                <EyeOutline class="w-4 h-4" />
+            {:else}
+                <EyeSlashOutline class="w-4 h-4" />
+            {/if}
+            </button>
+        </Input>
+            {#if wrongPasswordIntroduced}
+                <Alert color="red">
+                    <InfoCircleSolid slot="icon" class="w-4 h-4" />
+                    <span class="font-medium">Wrong password!</span>
+                    Try to introduce the password again.
+                </Alert>
+            {/if}
     </div>
-    <div>
-        <h2>Password:</h2>
-        <input  {type } on:change={onPwInput} {...$$restProps} >
+
+
+    <Button type="submit" class="w-1/2 align-center m-auto" on:click={onLogin}>Submit</Button>
     </div>
-    <div class="show_pass_div">
-        <input on:change={toggleVisibility}
-            type=checkbox name="toggle" id="toggle"
-        >
-        <label for="toggle">Show password</label>    
-    </div>
-    <button on:click={onLogin}>Login</button>
 </main>
 
 <style>
-    main {
-        display: block; /* or grid */
+    .login-container {
+        display: flex;
+        flex-direction: column;
+        width: 30%;
+        align-self: center;
         justify-content: center;
-        align-items: center;
-    }
-    h1 {
-        color:cornflowerblue;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: xx-large;
-        margin-left: 45%;
-    }
-    div {
-        margin-left: 45%;
-    }
-    button {
-        margin-top: 2%;
-        margin-left: 47%;
-    }
-    .show_pass_div {
-        margin-top: 1%;
-    }
-    label {
-        color:cornflowerblue;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: large; 
-    }
-    h2 {
-        color:cornflowerblue;
-        font-family: 'Courier New', Courier, monospace;
-    }
-    button {
-        margin-top: 1%;
-        margin-left: 48%;
-        align-items: center;
-        appearance: none;
-        background-image: radial-gradient(100% 100% at 100% 0, #5adaff 0, #5468ff 100%);
-        border: 0;
-        border-radius: 6px;
-        box-shadow: rgba(45, 35, 66, .4) 0 2px 4px,rgba(45, 35, 66, .3) 0 7px 13px -3px,rgba(58, 65, 111, .5) 0 -3px 0 inset;
-        box-sizing: border-box;
-        color: #fff;
-        cursor: pointer;
-        display: inline-flex;
-        font-family: "JetBrains Mono",monospace;
-        height: 48px;
-        justify-content: center;
-        line-height: 1;
-        list-style: none;
-        overflow: hidden;
-        padding-left: 16px;
-        padding-right: 16px;
-        position: relative;
-        text-align: left;
-        text-decoration: none;
-        transition: box-shadow .15s,transform .15s;
-        user-select: none;
-        -webkit-user-select: none;
-        touch-action: manipulation;
-        white-space: nowrap;
-        will-change: box-shadow,transform;
-        font-size: 18px;
-    }
-    button:focus {
-        box-shadow: #3c4fe0 0 0 0 1.5px inset, rgba(45, 35, 66, .4) 0 2px 4px, rgba(45, 35, 66, .3) 0 7px 13px -3px, #3c4fe0 0 -3px 0 inset;
-    }
-    button:hover {
-        box-shadow: rgba(45, 35, 66, .4) 0 4px 8px, rgba(45, 35, 66, .3) 0 7px 13px -3px, #3c4fe0 0 -3px 0 inset;
-        transform: translateY(-2px);
-    }
-    button:active {
-        box-shadow: #3c4fe0 0 3px 7px inset;
-        transform: translateY(2px);
+        margin-right: auto;
+        margin-left: auto;
+        margin-top: 3em;
     }
 </style>

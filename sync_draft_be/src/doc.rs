@@ -37,6 +37,18 @@ pub mod doc {
             }
         }
 
+        pub async fn no_of_docs_for_user(Json(payload): Json<GetDocs>) -> (StatusCode, Json<DocsNumber>) {
+            let mongo_wrap = MongoWrap::new().await;
+            let db_name = DB_NAME.to_string();
+            let collection_name = COLLECTION_NAME.to_string();
+
+            let result: Result<u64, mongodb::error::Error> = mongo_wrap.number_of_docs_for_user(payload.doc_owner, db_name, collection_name).await;
+            match result {
+                Ok(no_docs) => (StatusCode::CREATED, Json(DocsNumber{number: no_docs})),
+                Err(_) => (StatusCode::UNPROCESSABLE_ENTITY, Json(DocsNumber{number: 0}))
+            }
+        }
+
         pub async fn delete_doc(Json(payload): Json<DeleteDoc>) -> StatusCode {
             let uuid = payload._id;
 
@@ -89,5 +101,10 @@ pub mod doc {
     #[derive(Serialize, Deserialize)]
     pub struct GetDocs {
         doc_owner: String
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct DocsNumber {
+        number: u64,
     }
 }

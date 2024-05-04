@@ -27,6 +27,7 @@ async fn main() {
         .route("/doc/create", post(Document::create_doc))
         .route("/doc/delete", post(Document::delete_doc))
         .route("/doc/get", get(Document::get_docs_for_user))
+        .route("/doc/number", get(Document::no_of_docs_for_user))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
 
