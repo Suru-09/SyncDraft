@@ -16,6 +16,10 @@ Cargo.lock
 # Ignore DS_STORE
 .DS_Store
 
+# Node stuff
+node_modules
+package-lock.json
+
 # Ignore Svelte stuff
 .svelte-kit/
 client/editor-app/.svelte-kit/
