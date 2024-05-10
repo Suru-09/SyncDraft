@@ -3,6 +3,7 @@
 // https://github.com/usecanvas/logoot-js/blob/master/lib/logoot/sequence.js
 // https://github.com/ravern/logoot/blob/master/doc/doc.go
 
+const MAX_POS = 100;
 
 /**
  * The Identifier is a pair: <pos, siteId>
@@ -102,15 +103,15 @@ class PositionIdentifier {
  * The logoot document is composed of "lines", where each line is a pair: <pid, atom>, where
  * pid is a position identifier and an atom can be a character or a string.
  */
-class LogootDocument {
+export class LogootDocument {
     /**
      * Constructs a new LogootDocument.
      * Initializes with a beginning and an end line that serve as boundary markers.
      */
     constructor() {
         this.lines = [
-            {position: new PositionIdentifier([new Identifier(0, -1)], -Infinity), atom: null}, // LB
-            {position: new PositionIdentifier([new Identifier(Infinity, -1)], Infinity), atom: null}, // LE
+            {position: new PositionIdentifier([new Identifier(0, -1)], -MAX_POS), atom: null}, // LB
+            {position: new PositionIdentifier([new Identifier(MAX_POS, -1)], MAX_POS), atom: null}, // LE
         ];
     }
 
@@ -122,10 +123,10 @@ class LogootDocument {
      * @returns {PositionIdentifier} 
     */
     generatePosition(siteId, prevPos, nextPos) {
+        prevPos = prevPos.identifiers.length > 0 ? prevPos : new PositionIdentifier([new Identifier(0, siteId)], 0);
+        nextPos = nextPos.identifiers.length > 0 ? nextPos : new PositionIdentifier([new Identifier(MAX_POS, siteId)], 0);
         let prevHead = prevPos.identifiers[0];
         let nextHead = nextPos.identifiers[0];
-        console.log(`PREVHEAD: ${prevHead}`)
-        console.log(`NEXTHEAD: ${nextHead}`)
 
         switch (prevHead.compareTo(nextHead)) {
             case -1: {
@@ -137,6 +138,7 @@ class LogootDocument {
                 } else {
                     let prevWithoutFirstElem = new PositionIdentifier(prevPos.identifiers.slice(1), prevPos.clock);
                     let nextWithoutFirstElem = new PositionIdentifier(nextPos.identifiers.slice(1), nextPos.clock);
+
                     return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), 0);
                 }
             } case 0: {
@@ -178,7 +180,7 @@ class LogootDocument {
      */
     merge(other) {
         other.lines.forEach(line => {
-            if (line.position.identifiers[0].pos !== Infinity && line.position.identifiers[0].pos !== 0) {
+            if (line.position.identifiers[0].pos !== MAX_POS && line.position.identifiers[0].pos !== 0) {
                 const index = this.lines.findIndex(existingLine => existingLine.position.compareTo(line.position) === 0);
                 if (index === -1) {
                     this.insert(line.position, line.atom);
@@ -187,6 +189,21 @@ class LogootDocument {
                 // No action needed if the exact position already exists; assumes idempotency of operations
             }
         });
+    }
+
+    /**
+     * Inserts a new character (atom) in the logoot document using the index which is taken from the cursor position.
+     * @param {number} siteId The siteId of this document.
+     * @param {string} atom The atom that will be inserted.
+     * @param {number} index The index at which to insert. 
+     */
+    insertAtIndex(siteId, atom, index) {
+        let prevPos = this.lines[index - 1].position;
+        let nextPos = this.lines[index].position;
+        console.log(prevPos);
+        console.log(nextPos);
+        let newPos = this.generatePosition(siteId, prevPos, nextPos);
+        this.insert(newPos, atom);
     }
 
     /**
@@ -210,6 +227,15 @@ class LogootDocument {
  */
 function randomIntBetween(min, max) {
     return Math.floor(Math.random() * (max - (min + 1))) + min + 1;
+  }
+
+  /**
+   * Generate a siteId - a random 64-bit number.
+   * @returns {number} 
+   */
+export function generateSiteId() {
+    return Math.floor(Math.random() * Math.pow(2, 64));  // Random 64-bit number
+    
   }
 
 let iden = new Identifier(0, 1);

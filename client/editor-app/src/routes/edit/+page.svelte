@@ -5,34 +5,40 @@
     import { PaperClipOutline, MapPinAltSolid, ImageOutline, CodeOutline, FaceGrinOutline, PaperPlaneOutline, GlobeOutline } from 'flowbite-svelte-icons';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
     import { TrashBinSolid } from 'flowbite-svelte-icons';
+    import { LogootDocument, generateSiteId } from '$lib/utils/logoot';
     
-    // /**
-	//  * @type {any}
-	//  */
-    // let textareaValue;
+    /**
+	 * @type {any}
+	 */
+    let textareaValue;
 
-    // let cursorPosition;
+    let cursorPosition;
+    let siteId = generateSiteId();
+    let logootDocument = new LogootDocument();
 
-    // /**
-	//  * @param {any} event
-    // */
-    // async function onInputHandler(event) {
-    //     console.log(`data is ${event.data}`);
-    //     console.log(`textarea value is ${textareaValue}`);
+    /**
+	 * @param {any} event
+    */
+    async function onInputHandler(event) {
+        let char = event.data;
+        console.log(`data is ${char}`);
+        console.log(`textarea value is ${textareaValue}`);
 
-    //     cursorPosition = event.target.selectionStart;
-    //     console.log(`position is ${cursorPosition}`);
+        cursorPosition = event.target.selectionStart;
+        console.log(`position is ${cursorPosition}`);
+        logootDocument.insertAtIndex(siteId, char, cursorPosition);
+        console.log(logootDocument);
 
-    //     try {
-    //         const res = await axios.post(`${backendUrl}/edit`, {
-    //             dt: event.data,
-    //             val: textareaValue,
-    //             pos: cursorPosition
-    //         });
-    //     } catch (e) {
-    //         console.log(`error: ${e}`);
-    //     }
-    // }
+        // try {
+        //     const res = await axios.post(`${backendUrl}/edit`, {
+        //         dt: event.data,
+        //         val: textareaValue,
+        //         pos: cursorPosition
+        //     });
+        // } catch (e) {
+        //     console.log(`error: ${e}`);
+        // }
+    }
 
     let isTextareaFocused = false;
 
@@ -185,8 +191,8 @@
         <form class="w-3/5">
             <label for="editor" class="sr-only">Publish post</label>
             <div id="info"></div>
-            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
-                on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}>
+            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px" bind:value={textareaValue}
+                on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor} on:input={onInputHandler}>
               <Toolbar slot="header" embedded>
                 <ToolbarGroup>
                     <Input type="text" id="doc_name" placeholder="Document name" required />
