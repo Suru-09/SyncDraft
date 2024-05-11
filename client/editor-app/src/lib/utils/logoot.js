@@ -109,9 +109,12 @@ export class LogootDocument {
      * Initializes with a beginning and an end line that serve as boundary markers.
      */
     constructor() {
+        const currentDate = new Date();
+        const timestamp = currentDate.getTime();
+
         this.lines = [
-            {position: new PositionIdentifier([new Identifier(0, -1)], -MAX_POS), atom: null}, // LB
-            {position: new PositionIdentifier([new Identifier(MAX_POS, -1)], MAX_POS), atom: null}, // LE
+            {position: new PositionIdentifier([new Identifier(0, -1)], timestamp), atom: null}, // LB
+            {position: new PositionIdentifier([new Identifier(MAX_POS, -1)], timestamp), atom: null}, // LE
         ];
     }
 
@@ -123,8 +126,11 @@ export class LogootDocument {
      * @returns {PositionIdentifier} 
     */
     generatePosition(siteId, prevPos, nextPos) {
-        prevPos = prevPos.identifiers.length > 0 ? prevPos : new PositionIdentifier([new Identifier(0, siteId)], 0);
-        nextPos = nextPos.identifiers.length > 0 ? nextPos : new PositionIdentifier([new Identifier(MAX_POS, siteId)], 0);
+        const currentDate = new Date();
+        const timestamp = currentDate.getTime();
+
+        prevPos = prevPos.identifiers.length > 0 ? prevPos : new PositionIdentifier([new Identifier(0, siteId)], timestamp);
+        nextPos = nextPos.identifiers.length > 0 ? nextPos : new PositionIdentifier([new Identifier(MAX_POS, siteId)], timestamp);
         let prevHead = prevPos.identifiers[0];
         let nextHead = nextPos.identifiers[0];
 
@@ -132,19 +138,19 @@ export class LogootDocument {
             case -1: {
                 let diff = nextHead.pos - prevHead.pos;
                 if (diff > 1) {
-                    return new PositionIdentifier( [ new Identifier(randomIntBetween(prevHead.pos, nextHead.pos), siteId)], 0);
+                    return new PositionIdentifier( [ new Identifier(randomIntBetween(prevHead.pos, nextHead.pos), siteId)], timestamp);
                 } else if (diff === 1 && siteId > prevHead.siteId) {
-                    return new PositionIdentifier( [ new Identifier(prevHead.pos, siteId)], 0);
+                    return new PositionIdentifier( [ new Identifier(prevHead.pos, siteId)], timestamp);
                 } else {
                     let prevWithoutFirstElem = new PositionIdentifier(prevPos.identifiers.slice(1), prevPos.clock);
                     let nextWithoutFirstElem = new PositionIdentifier(nextPos.identifiers.slice(1), nextPos.clock);
 
-                    return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), 0);
+                    return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), timestamp);
                 }
             } case 0: {
                 let prevWithoutFirstElem = new PositionIdentifier(prevPos.identifiers.slice(1), prevPos.clock);
                 let nextWithoutFirstElem = new PositionIdentifier(nextPos.identifiers.slice(1), nextPos.clock);
-                return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), 0);
+                return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), timestamp);
             } case 1: {
                 throw new Error('"Next" position was less than "previous" position.')
             }
@@ -200,10 +206,19 @@ export class LogootDocument {
     insertAtIndex(siteId, atom, index) {
         let prevPos = this.lines[index - 1].position;
         let nextPos = this.lines[index].position;
-        console.log(prevPos);
-        console.log(nextPos);
         let newPos = this.generatePosition(siteId, prevPos, nextPos);
         this.insert(newPos, atom);
+    }
+
+    /**
+     * Removes a character from the logoot document using the index taken from the cursor position.
+     * @param {number} index The index at which to delete.  
+     */
+    deleteAtIndex(index) {
+        // we need to increment the index because the logoot document always has LB at index 0
+        let entry = this.lines[index + 1];
+        let posId = entry.position;
+        this.delete(posId); 
     }
 
     /**
@@ -229,10 +244,10 @@ function randomIntBetween(min, max) {
     return Math.floor(Math.random() * (max - (min + 1))) + min + 1;
   }
 
-  /**
-   * Generate a siteId - a random 64-bit number.
-   * @returns {number} 
-   */
+/**
+ * Generate a siteId - a random 64-bit number.
+ * @returns {number} 
+ */
 export function generateSiteId() {
     return Math.floor(Math.random() * Math.pow(2, 64));  // Random 64-bit number
     

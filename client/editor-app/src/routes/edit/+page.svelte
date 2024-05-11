@@ -2,7 +2,7 @@
     import axios from 'axios';
     import { backendUrl } from '../../config';
     import { Textarea, Toolbar, ToolbarGroup, ToolbarButton, Button, Input, Label } from 'flowbite-svelte';
-    import { PaperClipOutline, MapPinAltSolid, ImageOutline, CodeOutline, FaceGrinOutline, PaperPlaneOutline, GlobeOutline } from 'flowbite-svelte-icons';
+    import { PaperClipOutline, MapPinAltSolid, ImageOutline, CodeOutline, FaceGrinOutline, PaperPlaneOutline, GlobeOutline, EnvelopeOpenOutline } from 'flowbite-svelte-icons';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
     import { TrashBinSolid } from 'flowbite-svelte-icons';
     import { LogootDocument, generateSiteId } from '$lib/utils/logoot';
@@ -21,12 +21,19 @@
     */
     async function onInputHandler(event) {
         let char = event.data;
+        console.log(`event is`);
+        console.log(event)
         console.log(`data is ${char}`);
         console.log(`textarea value is ${textareaValue}`);
 
         cursorPosition = event.target.selectionStart;
         console.log(`position is ${cursorPosition}`);
-        logootDocument.insertAtIndex(siteId, char, cursorPosition);
+        if (char != null) {
+            logootDocument.insertAtIndex(siteId, char, cursorPosition);
+        } else if (event.inputType === 'deleteContentBackward') {
+            logootDocument.deleteAtIndex(cursorPosition);
+        }
+
         console.log(logootDocument);
 
         // try {
