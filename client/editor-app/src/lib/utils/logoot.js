@@ -201,24 +201,33 @@ export class LogootDocument {
      * Inserts a new character (atom) in the logoot document using the index which is taken from the cursor position.
      * @param {number} siteId The siteId of this document.
      * @param {string} atom The atom that will be inserted.
-     * @param {number} index The index at which to insert. 
+     * @param {number} index The index at which to insert.
+     * @returns {InsertOperation} An InsertOperation corresponding to this insertion.
      */
     insertAtIndex(siteId, atom, index) {
         let prevPos = this.lines[index - 1].position;
         let nextPos = this.lines[index].position;
         let newPos = this.generatePosition(siteId, prevPos, nextPos);
         this.insert(newPos, atom);
+
+        let insertOperation = new InsertOperation(newPos, atom, siteId);
+        return insertOperation;
     }
 
     /**
      * Removes a character from the logoot document using the index taken from the cursor position.
-     * @param {number} index The index at which to delete.  
+     * @param {number} siteId The siteId of this document.
+     * @param {number} index The index at which to delete. 
+     * @returns {DeleteOperation} A DeleteOperation corresponding to this deletion. 
      */
-    deleteAtIndex(index) {
+    deleteAtIndex(siteId, index) {
         // we need to increment the index because the logoot document always has LB at index 0
         let entry = this.lines[index + 1];
         let posId = entry.position;
-        this.delete(posId); 
+        this.delete(posId);
+        
+        let deleteOperation = new DeleteOperation(posId, siteId);
+        return deleteOperation;
     }
 
     /**
@@ -230,6 +239,55 @@ export class LogootDocument {
     }
 }
 
+/**
+ * Logoot insert operation that is sent over the network.
+ */
+export class InsertOperation {
+    /**
+     * 
+     * @param {PositionIdentifier} posId The position identifier that was generated for the inserted atom. 
+     * @param {*} atom The inserted atom.
+     * @param {*} siteId The siteId of the client that generated this operation.
+     */
+    constructor(posId, atom, siteId) {
+        this.type = "insert";
+        this.posId = posId;
+        this.atom = atom;
+        this.siteId = siteId;
+    }
+
+    /**
+     * Return a json that corresponds to this operation, which will be sent over the network.
+     * @returns {string}
+     */
+    getJson() {
+        return JSON.stringify(this);
+    }
+}
+
+/**
+ * Logoot delete operation that is sent over the network.
+ */
+export class DeleteOperation {
+    /**
+     * 
+     * @param {PositionIdentifier} posId The position identifier of the deleted atom. 
+     * @param {*} siteId The siteId of the client that generated this operation.
+     */
+    constructor(posId, siteId) {
+        this.type = "delete";
+        this.posId = posId;
+        this.siteId = siteId;
+    }
+
+    /**
+     * Return a json that corresponds to this operation, which will be sent over the network.
+     * @returns {string}
+     */
+    getJson() {
+        return JSON.stringify(this);
+    }
+}
 
 /**
  * Return a random number between two others.

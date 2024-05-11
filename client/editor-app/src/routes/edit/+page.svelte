@@ -29,9 +29,13 @@
         cursorPosition = event.target.selectionStart;
         console.log(`position is ${cursorPosition}`);
         if (char != null) {
-            logootDocument.insertAtIndex(siteId, char, cursorPosition);
+            let insertOperation = logootDocument.insertAtIndex(siteId, char, cursorPosition);
+            console.log(insertOperation);
+            console.log(insertOperation.getJson())
         } else if (event.inputType === 'deleteContentBackward') {
-            logootDocument.deleteAtIndex(cursorPosition);
+            let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
+            console.log(deleteOperation);
+            console.log(deleteOperation.getJson())
         }
 
         console.log(logootDocument);
