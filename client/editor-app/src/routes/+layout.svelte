@@ -1,16 +1,23 @@
 <script>
 	import '../app.pcss';
+	import { page } from '$app/stores';
 	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button } from 'flowbite-svelte';
 	import { DarkMode } from 'flowbite-svelte';
-	import { loggedIn } from '../stores.js';
+	import { loggedIn, userDocuments, loggedUser } from '../stores.js';
 	import { ArrowLeftToBracketOutline } from 'flowbite-svelte-icons';
 	import Logo from "$lib/assets/logo.png"
-	let username = "Suru";
+
+	let username = $loggedUser.firstName;
 
 	const logout = () => {
 		$loggedIn = false;
+		$userDocuments = [];
+		$loggedUser = {firstName: "", lastName: "", username: "", password: ""};
+		location.reload();
 	}
 
+	
+	$: activeUrl = $page.url.pathname;
 </script>
 
 <nav>
@@ -20,7 +27,7 @@
 		  <span class="self-center whitespace-nowrap text-2xl font-bold dark:text-white">SyncDraft</span>
 		</NavBrand>
 		<NavHamburger/>
-		<NavUl ulClass="flex items-center space-x-4 text-xl">
+		<NavUl {activeUrl} ulClass="flex items-center space-x-4 text-xl">
 		  <NavLi href="/edit"> Editor </NavLi>
 		  <NavLi href="/documents"> Documents </NavLi>
 		  {#if $loggedIn}

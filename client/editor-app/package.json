@@ -15,7 +15,9 @@
 	},
 	"dependencies": {
 		"axios": "*",
-		"svelte-persisted-store": "^0.9.2"
+		"peerjs": "^1.5.2",
+		"svelte-persisted-store": "^0.9.2",
+		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^4.5.10",

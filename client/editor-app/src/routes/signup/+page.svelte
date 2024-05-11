@@ -1,130 +1,125 @@
 <script>
     import axios from 'axios';
     import {backendUrl} from '../../config.js';
+    import { Input, Label, Helper, Button, Checkbox, A } from 'flowbite-svelte';
+	import { loggedUser } from '../../stores.js';
 
-    let isVisible = false;
-    let usernameValue = "";
-    let passwordValue = "";
-    
-    $: type = isVisible ? "text" : "password";
+  let currentUser = {
+    "username": "",
+    "password": "",
+    "confirmPassword": "",
+    "firstName": "",
+    "lastName": ""
+  };
 
-    const toggleVisibility = () => {
-        isVisible = !isVisible;
-    };
-
+  let confirmPWNotMatching = "The confirm password does not match the initial one.";
+ 
     async function onSignUp() {
-        console.log(`username is ${usernameValue}`);
-        console.log(`pw is ${passwordValue}`);
+      if (passwordsMatching == false || currentUser.firstName == ""
+          || currentUser.lastName == "" || currentUser.password == ""
+          || currentUser.username == "" || currentUser.username.search("@") == 0
+      ) 
+      {
+        return;
+      }
 
-        try {
-            axios.post(`${backendUrl}/user/create`, {
-                username: usernameValue,
-                password: passwordValue,
-            }).then(response => {
-                console.log(response);
-            });
-        } catch (e) {
-            console.log(`error: ${e}`);
-        }
+      console.log(`username is ${currentUser.username}`);
+      console.log(`pw is ${currentUser.password}`);
+
+      try {
+        console.log(currentUser);
+        axios.post(`${backendUrl}/user/create`, {
+            username: currentUser.username,
+            password: currentUser.password,
+            first_name: currentUser.firstName,
+            last_name: currentUser.lastName
+        }).then(response => {
+            console.log(response);
+            $loggedUser = response.data;
+        });
+      } catch (e) {
+          console.log(`error: ${e}`);
+      }
+    }
+
+    let passwordsMatching = true;
+    const checkConfirmPassword = () => {
+      if (currentUser.confirmPassword == currentUser.password) {
+        passwordsMatching = true;
+      }
+      else {
+        passwordsMatching = false;
+      }
     }
 
     /**
 	 * @param {any} event
     */
     const onPasswordInput = (event) => {
-        passwordValue = event.target.value;
+        currentUser.password = event.target.value;
+        checkConfirmPassword();
+    }
+    /**
+	 * @param {any} event
+    */
+    const onConfirmPasswordInput = (event) => {
+        currentUser.confirmPassword = event.target.value;
+        checkConfirmPassword();
+    }
+    /**
+	 * @param {any} event
+    */
+    const onUsernameInput = (event) => {
+        currentUser.username = event.target.value;
+    }
+    /**
+	 * @param {any} event
+    */
+    const onFirstNameInput = (event) => {
+        currentUser.firstName = event.target.value;
+    }
+    /**
+	 * @param {any} event
+    */
+    const onLastNameInput = (event) => {
+        currentUser.lastName = event.target.value;
     }
 </script>
 
 <main>
-    <h1>SyncDraft</h1>
-    <div>
-        <h2>Username:</h2>
-        <input bind:value={usernameValue}>
-    </div>
-    <div>
-        <h2>Password:</h2>
-        <input {type} on:input={onPasswordInput}>
-    </div>
-    <div class="show_pass_div">
-        <input on:change={toggleVisibility} type=checkbox name="toggle" id="toggle">
-        <label for="toggle">Show password</label>    
-    </div>
-    <button on:click={onSignUp}>Create account</button>
+    <form class="flex flex-col w-1/2 self-center ml-auto mr-auto mt-6 mb-6">
+        <div class="grid gap-6 mb-6 md:grid-cols-2">
+          <div>
+            <Label for="first_name" class="mb-2">First name</Label>
+            <Input on:input={onFirstNameInput} type="text" id="first_name" placeholder="John" required />
+          </div>
+          <div>
+            <Label for="last_name" class="mb-2">Last name</Label>
+            <Input on:input={onLastNameInput} pe="text" id="last_name" placeholder="Doe" required />
+          </div>
+        </div>
+        <div class="mb-6">
+          <Label for="email" class="mb-2">Email address</Label>
+          <Input on:input={onUsernameInput} type="email" id="email" placeholder="john.doe@company.com" required />
+        </div>
+        <div class="mb-6">
+          <Label for="password" class="mb-2">Password</Label>
+          <Input on:input={onPasswordInput} pe="password" id="password" placeholder="•••••••••" required />
+        </div>
+        <div class="mb-6">
+          <Label for="confirm_password" class="mb-2">Confirm password</Label>
+          <Input on:input={onConfirmPasswordInput} 
+            color={passwordsMatching == false ? "red" : "base"} type="password" id="confirm_password" placeholder="•••••••••" required
+          />
+          {#if passwordsMatching == false}
+          <Helper class="mt-2" color="red">
+              {confirmPWNotMatching}
+          </Helper>
+          {/if}
+        </div>
+        <Button on:click={onSignUp} type="submit">Submit</Button>
+      </form>
 </main>
 
 <style>
-    main {
-        display: block; /* or grid */
-        justify-content: center;
-        align-items: center;
-    }
-    h1 {
-        color:cornflowerblue;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: xx-large;
-        margin-left: 45%;
-    }
-    div {
-        margin-left: 45%;
-    }
-    .show_pass_div {
-        margin-top: 1%;
-    }
-    label {
-        color:cornflowerblue;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: large; 
-    }
-    button {
-        margin-top: 2%;
-        margin-left: 47%;
-    }
-    h2 {
-        color:cornflowerblue;
-        font-family: 'Courier New', Courier, monospace;
-    }
-    button {
-        margin-top: 1%;
-        margin-left: 45%;
-        align-items: center;
-        appearance: none;
-        background-image: radial-gradient(100% 100% at 100% 0, #5adaff 0, #5468ff 100%);
-        border: 0;
-        border-radius: 6px;
-        box-shadow: rgba(45, 35, 66, .4) 0 2px 4px,rgba(45, 35, 66, .3) 0 7px 13px -3px,rgba(58, 65, 111, .5) 0 -3px 0 inset;
-        box-sizing: border-box;
-        color: #fff;
-        cursor: pointer;
-        display: inline-flex;
-        font-family: "JetBrains Mono",monospace;
-        height: 48px;
-        justify-content: center;
-        line-height: 1;
-        list-style: none;
-        overflow: hidden;
-        padding-left: 16px;
-        padding-right: 16px;
-        position: relative;
-        text-align: left;
-        text-decoration: none;
-        transition: box-shadow .15s,transform .15s;
-        user-select: none;
-        -webkit-user-select: none;
-        touch-action: manipulation;
-        white-space: nowrap;
-        will-change: box-shadow,transform;
-        font-size: 18px;
-    }
-    button:focus {
-        box-shadow: #3c4fe0 0 0 0 1.5px inset, rgba(45, 35, 66, .4) 0 2px 4px, rgba(45, 35, 66, .3) 0 7px 13px -3px, #3c4fe0 0 -3px 0 inset;
-    }
-    button:hover {
-        box-shadow: rgba(45, 35, 66, .4) 0 4px 8px, rgba(45, 35, 66, .3) 0 7px 13px -3px, #3c4fe0 0 -3px 0 inset;
-        transform: translateY(-2px);
-    }
-    button:active {
-        box-shadow: #3c4fe0 0 3px 7px inset;
-        transform: translateY(2px);
-    }
 </style>

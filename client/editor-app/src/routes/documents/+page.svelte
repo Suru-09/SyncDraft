@@ -1,91 +1,221 @@
-<script>
+<script lang="ts">
     import { onMount } from 'svelte';
-    import { backendUrl } from '../../config';
-    import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
+    import { goto } from '$app/navigation';
+    import { backendUrl, peerJSServerUrl } from '../../config';
+    import { Table, TableBody, TableBodyCell, TableBodyRow,
+         TableHead, TableHeadCell, Pagination, 
+		 Button, Select, Label, Modal
+    } from 'flowbite-svelte';
     import axios from 'axios';
-    import {TrashBinOutline, EditOutline } from 'flowbite-svelte-icons';
-    import { Pagination } from 'flowbite-svelte';
-    import { ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
-	import { inputClass, labelClass } from 'flowbite-svelte/Radio.svelte';
+    import {TrashBinOutline, EditOutline, ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
+    import { userDocuments, loggedUser, isAnyDocEdited, currentEditingDocument } from '../../stores';
+    import { PeerConnection } from '$lib/utils/peer';
 
-    let helper = { start: 1, end: 10, total: 100 };
+    let selected = 10;
+    let pageSizes = [
+        { value: 10, name: '10' },
+        { value: 25, name: '25' },
+        { value: 50, name: '50' },
+        { value: 100, name: '100' }
+    ];
+
+    let pageSize = selected;
+    let currentDocsBodySize = 40;   // number of characters in body shown to the user..
+    let helper = { start: 1, end: pageSize, total: 100 };
     const previous = () => {
-        //alert('Previous btn clicked. Make a call to your server to fetch data.');
+        if (helper.start - pageSize >= 1)
+        {
+            helper.start -= pageSize;
+            helper.end -= pageSize;
+        }
+        currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
      };
 
     const next = () => {
-        //alert('Next btn clicked. Make a call to your server to fetch data.');
+        if (helper.start + pageSize <= helper.total)
+        {
+            helper.end += pageSize;
+            helper.start += pageSize;
+        }
+        currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
     }
 
+    const trimDocsBody = () => {
+        currentDocs.forEach((doc) => {
+            doc.body = doc.body.slice(0, currentDocsBodySize);
+        });
+    }
 
-    let documents = [{"doc_name": "", "doc_owner": "", "body": ""}];
+    let currentDocs = $userDocuments;
+
+    const handleSelectPageSize = async () => {
+        helper.end = Math.min(selected, helper.total);;
+        pageSize = selected;
+        currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
+    }
 
     async function fetchDocuments() {
         try {
             const params = {
-                doc_owner: "Suru",
+                doc_owner: $loggedUser.username,
             };
             const response = await axios.get(`${backendUrl}/doc/get`, {params});
-            console.log(response);
-            documents = response.data;
+            $userDocuments = response.data;
+            currentDocs = $userDocuments.slice(helper.start - 1, helper.end);
+            trimDocsBody();
+            helper.total = $userDocuments.length;
+            helper.end = Math.min(helper.total, helper.end);
         } catch (error) {
             console.error('Error fetching documents:', error);
         }
     }
 
+    const createWEBRTCSession = async () => {
+        // start the session
+        PeerConnection.startPeerSession().then(async () => {
+            const webrtcID = PeerConnection.getPeer()?.id;
+            await axios.post(`${peerJSServerUrl}/create-session`, {
+                "_id": $currentEditingDocument._id,
+                "doc_owner": $currentEditingDocument.doc_owner,
+                "webrtc_id": webrtcID
+            })
+            .then((result) => {
+                console.log(result);
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+        });
+    }
+
+    async function editDocument(index: number) {
+        // set current doc
+        $isAnyDocEdited = true;
+        $currentEditingDocument = $userDocuments[index];
+        // only after completing the currentEditingDocument!!!!
+        await createWEBRTCSession();
+        
+        goto('/edit');
+    }
+
+    async function createNewDocument() {
+        // set new doc
+        $isAnyDocEdited = true;
+        $currentEditingDocument = {
+            "_id": "",
+            "body": "",
+            "doc_owner": $loggedUser.username,
+            "doc_name": "",
+        };
+        goto('/edit');
+    }
+
+    async function deleteDocument(index: number) {
+        showModal = true;
+        doc_index = index;
+    }
+
+    let showModal = false;
+    let doc_index: number = -1;
+    async function confirmDelete() {
+        await axios.post(`${backendUrl}/doc/delete`, {
+            _id: $userDocuments[doc_index]._id,
+        })
+            .then((result) => {
+                location.assign('/documents');
+                console.log(result);
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+        
+        showModal = false;
+        doc_index = -1;
+    }
+
     // Call the fetch function when the component mounts
     onMount(() => {
+        $userDocuments = [];
         fetchDocuments();
     });
 </script>
 
 <main class="bg-white dark:bg-gray-800">
-    <Table style="width: 95%; margin-top: 3rem; margin-left: auto; margin-right: auto;" striped={true}>
-        <TableHead>
-            <TableHeadCell>Document Name</TableHeadCell>
-            <TableHeadCell>Document Owner</TableHeadCell>
-            <TableHeadCell>Body</TableHeadCell>
-            <TableHeadCell>Edit</TableHeadCell>
-            <TableHeadCell>Delete</TableHeadCell>
-        </TableHead>
-        <TableBody tableBodyClass="divide-y">
-            {#each documents as document}
-                <TableBodyRow>
-                    <TableBodyCell>{document.doc_name}</TableBodyCell>
-                    <TableBodyCell>{document.doc_owner}</TableBodyCell>
-                    <TableBodyCell>{document.body}</TableBodyCell>
-                    <TableBodyCell>
-                        <EditOutline class="w-6 h-5 me-2 text-primary-500 hover:outline dark:text-primary-500" />
-                    </TableBodyCell>
-                    <TableBodyCell>
-                        <TrashBinOutline class="w-6 h-5 me-2 text-primary-500 hover:outline dark:text-primary-500" />
-                    </TableBodyCell>
-                </TableBodyRow>
-            {/each}
-        </TableBody>
-    </Table>
-    
-    <div class="flex flex-col items-center justify-center gap-2 mt-5">
-      <div class="text-sm text-gray-700 dark:text-gray-400">
-        Showing <span class="font-semibold text-gray-900 dark:text-white">{helper.start}</span>
-        to
-        <span class="font-semibold text-gray-900 dark:text-white">{helper.end}</span>
-        of
-        <span class="font-semibold text-gray-900 dark:text-white">{helper.total}</span>
-        Entries
-    </div>
-    
-    <Pagination large>
-        <button type="button" slot="prev" on:click={previous} class="flex items-center gap-2 dark:text-white text-gray-900 bg-white dark:bg-gray-800">
-            <ArrowLeftOutline class="w-3.5 h-3.5 me-2"/>
-            Prev
-        </button>
-        <button type="button" slot="next" on:click={next} class="flex items-center gap-2 dark:text-white text-gray-900 bg-white dark:bg-gray-800">
-            Next
-            <ArrowRightOutline class="w-6 h-6 me-2"/>
-        </button>
-    </Pagination>
+        <Table divClass="w-3/4 flex flex-col m-auto" striped={true}>
+            <TableHead>
+                <TableHeadCell>Document Name</TableHeadCell>
+                <TableHeadCell>Document Owner</TableHeadCell>
+                <TableHeadCell>Body</TableHeadCell>
+                <TableHeadCell>Edit</TableHeadCell>
+                <TableHeadCell>Delete</TableHeadCell>
+            </TableHead>
+            <TableBody tableBodyClass="divide-y">
+                {#each currentDocs as document, index}
+                    <TableBodyRow>
+                        <TableBodyCell>{document.doc_name}</TableBodyCell>
+                        <TableBodyCell>{document.doc_owner}</TableBodyCell>
+                        <TableBodyCell>{document.body}</TableBodyCell>
+                        <TableBodyCell on:click={() => editDocument(index)}>
+                            <EditOutline class="w-6 h-5 me-2 text-primary-500 hover:outline dark:text-primary-500" />
+                        </TableBodyCell>
+                        <TableBodyCell on:click={() => deleteDocument(index)}>
+                            <TrashBinOutline class="w-6 h-5 me-2 text-primary-500 hover:outline dark:text-primary-500" />
+                        </TableBodyCell>
+                    </TableBodyRow>
+                {/each}
+            </TableBody>
+            <div class="under-table">
+                    <div class="flex flex-col items-center justify-center gap-2 mt-5">
+                        <div class="text-sm text-gray-700 dark:text-gray-400">
+                            Showing <span class="font-semibold text-gray-900 dark:text-white">{helper.start}</span>
+                            to
+                            <span class="font-semibold text-gray-900 dark:text-white">{helper.end}</span>
+                            docs of
+                            <span class="font-semibold text-gray-900 dark:text-white">{helper.total}</span>
+                            total docs
+                        </div>
+                    
+                        <Pagination large>
+                            <button type="button" slot="prev" on:click={previous} class="flex items-center gap-2 dark:text-white text-gray-900 bg-white dark:bg-gray-800">
+                                <ArrowLeftOutline class="w-3.5 h-3.5 me-2"/>
+                                Prev
+                            </button>
+                            <button type="button" slot="next" on:click={next} class="flex items-center gap-2 dark:text-white text-gray-900 bg-white dark:bg-gray-800">
+                                Next
+                                <ArrowRightOutline class="w-6 h-6 me-2"/>
+                            </button>
+                        </Pagination>
+                    </div>
+                    <Label>
+                        Select page size
+                        <Select class="mt-2" items={pageSizes} bind:value={selected} on:change={handleSelectPageSize}/>
+                    </Label>
+                    <Button on:click={() => createNewDocument()}> Create a new document </Button>
+            </div>
+        </Table>
+
+        <Modal bind:open={showModal}>
+            <div slot="header" class="text-lg leading-6 font-medium text-gray-900">
+              Delete Document
+            </div>
+            <div class="text-sm text-gray-500">
+              Are you sure you want to delete the document?
+            </div>
+            <div slot="footer" class="flex justify-end">
+              <button class="px-4 py-2 bg-red-600 text-white rounded-md mr-2" on:click={confirmDelete}>Delete</button>
+              <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md">Cancel</button>
+            </div>
+          </Modal>
 </main>
 
-<style>
+<style>  
+    .under-table {
+        min-width: 100%;
+        width: 155%;
+        overflow: auto;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
 </style>

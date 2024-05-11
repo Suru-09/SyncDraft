@@ -37,6 +37,41 @@ pub mod doc {
             }
         }
 
+        pub async fn update_doc(Json(payload): Json<UpdateDoc>) -> (StatusCode, Json<Document>) {
+            let doc = Document {
+                _id: payload._id,
+                doc_name: payload.doc_name,
+                doc_owner: payload.doc_owner,
+                body: payload.body
+            };
+
+            let mongo_wrap = MongoWrap::new().await;
+            let db_name = DB_NAME.to_string();
+            let collection_name = COLLECTION_NAME.to_string();
+            
+            let result = mongo_wrap.update_doc(doc.clone(), db_name, collection_name).await;
+            match result {
+                Ok(_) => (StatusCode::CREATED, Json(doc)),
+                Err(error) => {
+                    println!("Error when updating document: {:?}", error);
+                    (StatusCode::UNPROCESSABLE_ENTITY, Json(doc)) 
+                }
+
+            }
+        }
+
+        pub async fn no_of_docs_for_user(Json(payload): Json<GetDocs>) -> (StatusCode, Json<DocsNumber>) {
+            let mongo_wrap = MongoWrap::new().await;
+            let db_name = DB_NAME.to_string();
+            let collection_name = COLLECTION_NAME.to_string();
+
+            let result: Result<u64, mongodb::error::Error> = mongo_wrap.number_of_docs_for_user(payload.doc_owner, db_name, collection_name).await;
+            match result {
+                Ok(no_docs) => (StatusCode::CREATED, Json(DocsNumber{number: no_docs})),
+                Err(_) => (StatusCode::UNPROCESSABLE_ENTITY, Json(DocsNumber{number: 0}))
+            }
+        }
+
         pub async fn delete_doc(Json(payload): Json<DeleteDoc>) -> StatusCode {
             let uuid = payload._id;
 
@@ -77,8 +112,10 @@ pub mod doc {
 
     #[derive(Serialize, Deserialize)]
     pub struct UpdateDoc {
-        _id: String,
-        update_c: char,
+        _id: Uuid,
+        doc_name: String,
+        doc_owner: String,
+        body: String,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -89,5 +126,10 @@ pub mod doc {
     #[derive(Serialize, Deserialize)]
     pub struct GetDocs {
         doc_owner: String
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct DocsNumber {
+        number: u64,
     }
 }
