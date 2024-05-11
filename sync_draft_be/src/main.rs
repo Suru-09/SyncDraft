@@ -25,6 +25,7 @@ async fn main() {
         .route("/user/login", post(User::verify_user))
         .route("/user/delete", post(User::delete_user))
         .route("/doc/create", post(Document::create_doc))
+        .route("/doc/update", post(Document::update_doc))
         .route("/doc/delete", post(Document::delete_doc))
         .route("/doc/get", get(Document::get_docs_for_user))
         .route("/doc/number", get(Document::no_of_docs_for_user))

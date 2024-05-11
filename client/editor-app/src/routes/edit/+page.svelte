@@ -1,10 +1,45 @@
-<script>
+<script lang="ts">
     import axios from 'axios';
     import { backendUrl } from '../../config';
-    import { Textarea, Toolbar, ToolbarGroup, ToolbarButton, Button, Input, Label } from 'flowbite-svelte';
-    import { PaperClipOutline, MapPinAltSolid, ImageOutline, CodeOutline, FaceGrinOutline, PaperPlaneOutline, GlobeOutline } from 'flowbite-svelte-icons';
+    import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label } from 'flowbite-svelte';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
-    import { TrashBinSolid } from 'flowbite-svelte-icons';
+	import { onMount, createEventDispatcher } from 'svelte';
+    import { currentEditingDocument, isAnyDocEdited } from '../../stores';
+
+    export let value: string = '';
+    export let currentDocumentName: string = '';
+
+    function handleChange(event: Event) {
+        const target = event.target as HTMLTextAreaElement;
+        value = target.value;
+        $currentEditingDocument.body = value;
+    }
+
+    function handleDocNameChange(event: Event) {
+        const target = event.target as HTMLTextAreaElement;
+        currentDocumentName = target.value;
+        $currentEditingDocument.doc_name = currentDocumentName;
+    }
+  
+
+    onMount(() => {
+        value = $isAnyDocEdited ? $currentEditingDocument.body : '';
+        currentDocumentName = $isAnyDocEdited ? $currentEditingDocument.doc_name : '';
+
+        // make sure when client leaves we delete the doc he was last editing.
+        if (window && window !== undefined)
+        {
+            window.addEventListener('beforeunload', function (event) {
+                $isAnyDocEdited = false;
+                $currentEditingDocument = {
+                    "_id": "",
+                    "body": "",
+                    "doc_owner": "",
+                    "doc_name": "",
+                };
+            });
+        }
+    });
     
     // /**
 	//  * @type {any}
@@ -61,7 +96,7 @@
     /**
     * @param {any} event
     */
-    function getCursor(event) {
+    function getCursor(event: any) {
         let x = event.clientX;
         let y = event.clientY;
         let _position = `Suru`;
@@ -135,14 +170,9 @@
         getColumn(event);
     }
 
-    /**
-    * @param {number} x
-    * @param {number} y
-    * @param {DOMRect} rect
-    */
-    const pointInRect = (x, y, rect) => {
-        console.log("Sanity check");
-        console.log(`x: ${x}, y: ${y} and rect: l: ${rect?.left} r: ${rect?.right} t: ${rect?.top} b: ${rect?.bottom}`);
+    const pointInRect = (x: any, y: any, rect: any) => {
+        //console.log("Sanity check");
+        //console.log(`x: ${x}, y: ${y} and rect: l: ${rect?.left} r: ${rect?.right} t: ${rect?.top} b: ${rect?.bottom}`);
         if (x > rect.right || x < rect.left) {
             return false;
         }
@@ -156,10 +186,7 @@
 
 
     let line = 0 ;
-    /**
-    * @param {any} event
-    */
-    function getLine(event)
+    function getLine(event: any)
     {
         let textarea = event.target;
         line = textarea.value.substr(0, textarea.selectStart).split('\n').length;
@@ -169,7 +196,7 @@
     /**
     * @param {any} event
     */
-    function getColumn(event)
+    function getColumn(event: any)
     {
         let textarea = event.target;
         const linesBeforeCursor = textarea.value.substr(0, textarea.selectionStart).split('\n').length - 1;
@@ -177,6 +204,34 @@
         column = lastLine.length + 1;
 
     }
+
+    const saveDocument = async () => {
+        if ($currentEditingDocument._id !== "")
+        {
+            console.log(`Updating an already existing doc...`);
+            console.log($currentEditingDocument);
+            await axios.post(`${backendUrl}/doc/update`, $currentEditingDocument)
+                .then((result) => {
+                    console.log(result);
+                })
+                .catch((err) => {
+                    console.log(err);
+                });
+        }
+        else
+        {
+            console.log(`Creating a new document...`);
+            console.log($currentEditingDocument);
+            await axios.post(`${backendUrl}/doc/create`, $currentEditingDocument)
+                .then((result) => {
+                    console.log(result);
+                    $currentEditingDocument._id = result.data._id;
+                })
+                .catch((err) => {
+                    console.log(err);
+                });
+        }
+    };
 
 </script>
 
@@ -186,10 +241,14 @@
             <label for="editor" class="sr-only">Publish post</label>
             <div id="info"></div>
             <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
-                on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}>
+                on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}
+                bind:value={value} on:input={handleChange}
+                >
               <Toolbar slot="header" embedded>
                 <ToolbarGroup>
-                    <Input type="text" id="doc_name" placeholder="Document name" required />
+                    <Input type="text" id="doc_name" placeholder="Document name" 
+                        bind:value={currentDocumentName} on:input={handleDocNameChange} required 
+                    />
                 </ToolbarGroup>
                 <ToolbarGroup>
                     <Label for="website" class="mb-2"> Document Owner: Suru </Label>
@@ -198,7 +257,10 @@
             </Textarea>
             <div>
                 <p class="numerics">Line: {line} | Column: {column}</p>
-                <Button>Save document</Button>
+                <Button on:click={() => saveDocument()}
+                    >
+                    Save document
+                </Button>
             </div>
         </form>
 

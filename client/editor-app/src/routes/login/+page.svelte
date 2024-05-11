@@ -2,7 +2,6 @@
     import {backendUrl} from '../../config.js';
     import axios from 'axios';
     import { loggedIn, loggedUser } from '../../stores.js';
-	import { goto } from '$app/navigation';
     import { Button, Label, Input, Alert } from 'flowbite-svelte';
     import { EyeOutline, EyeSlashOutline, InfoCircleSolid } from 'flowbite-svelte-icons';
     import { EnvelopeSolid } from 'flowbite-svelte-icons';

@@ -1,7 +1,7 @@
 pub mod mongo_wrap {
 
 use futures::{TryFutureExt, TryStreamExt};
-use mongodb::{bson::{doc, Uuid}, options::SelectionCriteria, results::{DeleteResult, InsertManyResult, InsertOneResult}, Client};
+use mongodb::{bson::{doc, to_bson, to_document, Uuid}, options::SelectionCriteria, results::{DeleteResult, InsertManyResult, InsertOneResult, UpdateResult}, Client, Collection};
 use serde::Serialize;
 use std::env;
 use pwhash::bcrypt;
@@ -28,6 +28,23 @@ impl MongoWrap {
         let collection = db.collection::<T>(&collection_name);
 
         collection.insert_one(to_insert, None).await
+    }
+
+    pub async fn update_doc(&self, to_update: Document, db_name: String, collection_name: String) -> Result<UpdateResult, mongodb::error::Error> {
+        let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
+        let db = client.database(&db_name);
+        let collection: Collection<Document> = db.collection::<Document>(&collection_name);
+
+        let uuid = to_bson(&to_update._id.clone()).unwrap();
+        let document = doc! {
+            "$set": to_document(&to_update).unwrap()
+        };
+        
+        println!("Document is : {:?}", document.clone());
+
+        collection.update_one(doc! {
+            "_id": to_bson(&uuid).unwrap()
+        }, document, None).await
     }
 
     pub async fn insert_many<T: Serialize>(&self, to_insert_vec: Vec<T>, db_name: String, collection_name: String) -> Result<InsertManyResult, mongodb::error::Error> {

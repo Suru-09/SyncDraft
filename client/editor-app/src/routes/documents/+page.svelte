@@ -1,13 +1,16 @@
-<script>
+<script lang="ts">
     import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
     import { backendUrl } from '../../config';
     import { Table, TableBody, TableBodyCell, TableBodyRow,
          TableHead, TableHeadCell, Pagination, 
-		 Button, Select, Label 
+		 Button, Select, Label, Modal
     } from 'flowbite-svelte';
     import axios from 'axios';
     import {TrashBinOutline, EditOutline, ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
-    import { userDocuments, loggedUser } from '../../stores';
+    import { userDocuments, loggedUser, isAnyDocEdited, currentEditingDocument } from '../../stores';
+
+
     let selected = 10;
     let pageSizes = [
         { value: 10, name: '10' },
@@ -17,7 +20,7 @@
     ];
 
     let pageSize = selected;
-    let currentDocsBodySize = 40;
+    let currentDocsBodySize = 40;   // number of characters in body shown to the user..
     let helper = { start: 1, end: pageSize, total: 100 };
     const previous = () => {
         if (helper.start - pageSize >= 1)
@@ -67,6 +70,48 @@
         }
     }
 
+    async function editDocument(index: number) {
+        // set current doc
+        $isAnyDocEdited = true;
+        $currentEditingDocument = $userDocuments[index];
+        goto('/edit');
+    }
+
+    async function createNewDocument() {
+        // set new doc
+        $isAnyDocEdited = true;
+        $currentEditingDocument = {
+            "_id": "",
+            "body": "",
+            "doc_owner": $loggedUser.username,
+            "doc_name": "",
+        };
+        goto('/edit');
+    }
+
+    async function deleteDocument(index: number) {
+        showModal = true;
+        doc_index = index;
+    }
+
+    let showModal = false;
+    let doc_index: number = -1;
+    async function confirmDelete() {
+        await axios.post(`${backendUrl}/doc/delete`, {
+            _id: $userDocuments[doc_index]._id,
+        })
+            .then((result) => {
+                location.assign('/documents');
+                console.log(result);
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+        
+        showModal = false;
+        doc_index = -1;
+    }
+
     // Call the fetch function when the component mounts
     onMount(() => {
         $userDocuments = [];
@@ -84,15 +129,15 @@
                 <TableHeadCell>Delete</TableHeadCell>
             </TableHead>
             <TableBody tableBodyClass="divide-y">
-                {#each currentDocs as document}
+                {#each currentDocs as document, index}
                     <TableBodyRow>
                         <TableBodyCell>{document.doc_name}</TableBodyCell>
                         <TableBodyCell>{document.doc_owner}</TableBodyCell>
                         <TableBodyCell>{document.body}</TableBodyCell>
-                        <TableBodyCell>
+                        <TableBodyCell on:click={() => editDocument(index)}>
                             <EditOutline class="w-6 h-5 me-2 text-primary-500 hover:outline dark:text-primary-500" />
                         </TableBodyCell>
-                        <TableBodyCell>
+                        <TableBodyCell on:click={() => deleteDocument(index)}>
                             <TrashBinOutline class="w-6 h-5 me-2 text-primary-500 hover:outline dark:text-primary-500" />
                         </TableBodyCell>
                     </TableBodyRow>
@@ -124,15 +169,28 @@
                         Select page size
                         <Select class="mt-2" items={pageSizes} bind:value={selected} on:change={handleSelectPageSize}/>
                     </Label>
-                    <Button> Create a new document </Button>
+                    <Button on:click={() => createNewDocument()}> Create a new document </Button>
             </div>
         </Table>
+
+        <Modal bind:open={showModal}>
+            <div slot="header" class="text-lg leading-6 font-medium text-gray-900">
+              Delete Document
+            </div>
+            <div class="text-sm text-gray-500">
+              Are you sure you want to delete the document?
+            </div>
+            <div slot="footer" class="flex justify-end">
+              <button class="px-4 py-2 bg-red-600 text-white rounded-md mr-2" on:click={confirmDelete}>Delete</button>
+              <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md">Cancel</button>
+            </div>
+          </Modal>
 </main>
 
 <style>  
     .under-table {
         min-width: 100%;
-        width: 215%;
+        width: 155%;
         overflow: auto;
         display: flex;
         flex-direction: row;
