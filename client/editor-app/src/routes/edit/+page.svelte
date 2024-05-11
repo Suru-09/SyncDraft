@@ -4,7 +4,8 @@
     import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label } from 'flowbite-svelte';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
 	import { onMount, createEventDispatcher } from 'svelte';
-    import { currentEditingDocument, isAnyDocEdited } from '../../stores';
+    import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn } from '../../stores';
+	import { PeerConnection } from '$lib/utils/peer';
 
     export let value: string = '';
     export let currentDocumentName: string = '';
@@ -41,37 +42,10 @@
         }
     });
     
-    // /**
-	//  * @type {any}
-	//  */
-    // let textareaValue;
-
-    // let cursorPosition;
-
-    // /**
-	//  * @param {any} event
-    // */
-    // async function onInputHandler(event) {
-    //     console.log(`data is ${event.data}`);
-    //     console.log(`textarea value is ${textareaValue}`);
-
-    //     cursorPosition = event.target.selectionStart;
-    //     console.log(`position is ${cursorPosition}`);
-
-    //     try {
-    //         const res = await axios.post(`${backendUrl}/edit`, {
-    //             dt: event.data,
-    //             val: textareaValue,
-    //             pos: cursorPosition
-    //         });
-    //     } catch (e) {
-    //         console.log(`error: ${e}`);
-    //     }
-    // }
 
     let isTextareaFocused = false;
 
-    let userNames = ['Suru', 'John Doe', 'Jane Smith', 'dada', 'dada', 'dada', 'wtf'];
+    let userNames = [$loggedUser.firstName];
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
     let index = 0;
@@ -81,8 +55,7 @@
     }
 
     let cursors = [
-        {"position": 0, "username": "Suru", "color": getNextColor()},
-        {"position": 15, "username": "Dodel", "color": getNextColor()},
+        {"position": 0, "username": $loggedUser.firstName, "color": getNextColor()},
     ];
 
     function handleTextareaFocus() {
@@ -99,7 +72,7 @@
     function getCursor(event: any) {
         let x = event.clientX;
         let y = event.clientY;
-        let _position = `Suru`;
+        let _position = $loggedUser.firstName;
 
         let index_x = event.target.selectionEnd;
 
@@ -127,13 +100,13 @@
             const rect = editorRect.length == 1 ? editorRect[0] : null;
 
             
-            if (rect) {
-                console.log(pointInRect(x, y, rect));
+            // if (rect) {
+            //     console.log(pointInRect(x, y, rect));
 
-            }
-            else{
-                console.log("Editor rectangle is null");
-            }
+            // }
+            // else{
+            //     console.log("Editor rectangle is null");
+            // }
             
             let padding_left = infoElement.clientWidth * 3/4;
             let padding_up = infoElement.clientHeight / 2;
@@ -251,7 +224,13 @@
                     />
                 </ToolbarGroup>
                 <ToolbarGroup>
-                    <Label for="website" class="mb-2"> Document Owner: Suru </Label>
+                    <Label for="website" class="mb-2"> Document Owner: {$currentEditingDocument.doc_owner} </Label>
+                </ToolbarGroup>
+
+                <ToolbarGroup>
+                    <Label for="website" class="mb-2"> Session id: 
+                        {$currentEditingDocument._id !== "" ? $currentEditingDocument._id : 'Not a session'} 
+                    </Label>
                 </ToolbarGroup>
               </Toolbar>
             </Textarea>
@@ -296,13 +275,14 @@
     }
 
     #info {
-        padding-left: 10px;
+        padding-left: 5px;
+        padding-right: 5px;
         border-radius: 10px;
         position: absolute;
         user-select: none;
         font-size: 1em;
         text-align: center;
-        width: 45px;
+        width: 75px;
         color: #EEEEEE;
         background-color: #FD7013;
     }
