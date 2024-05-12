@@ -9,7 +9,6 @@
     import axios from 'axios';
     import {TrashBinOutline, EditOutline, ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
     import { userDocuments, loggedUser, isAnyDocEdited, currentEditingDocument } from '../../stores';
-    import { PeerConnection } from '$lib/utils/peer';
 
     let selected = 10;
     let pageSizes = [
@@ -71,21 +70,24 @@
     }
 
     const createWEBRTCSession = async () => {
-        // start the session
-        PeerConnection.startPeerSession().then(async () => {
-            const webrtcID = PeerConnection.getPeer()?.id;
-            await axios.post(`${peerJSServerUrl}/create-session`, {
-                "_id": $currentEditingDocument._id,
-                "doc_owner": $currentEditingDocument.doc_owner,
-                "webrtc_id": webrtcID
-            })
-            .then((result) => {
-                console.log(result);
-            })
-            .catch((err) => {
-                console.log(err);
+        // start the session\
+        import('$lib/utils/peer').then((peerModule) => {
+            peerModule.PeerConnection.startPeerSession().then(async () => {
+                const webrtcID = peerModule.PeerConnection.getPeer()?.id;
+                await axios.post(`${peerJSServerUrl}/create-session`, {
+                    "_id": $currentEditingDocument._id,
+                    "doc_owner": $currentEditingDocument.doc_owner,
+                    "webrtc_id": webrtcID
+                })
+                .then((result) => {
+                    console.log(result);
+                })
+                .catch((err) => {
+                    console.log(err);
+                });
             });
         });
+        
     }
 
     async function editDocument(index: number) {
@@ -131,6 +133,10 @@
         
         showModal = false;
         doc_index = -1;
+    }
+
+    async function cancelDelete() {
+        showModal = false;
     }
 
     // Call the fetch function when the component mounts
@@ -203,7 +209,7 @@
             </div>
             <div slot="footer" class="flex justify-end">
               <button class="px-4 py-2 bg-red-600 text-white rounded-md mr-2" on:click={confirmDelete}>Delete</button>
-              <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md">Cancel</button>
+              <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md" on:click={cancelDelete}>Cancel</button>
             </div>
           </Modal>
 </main>

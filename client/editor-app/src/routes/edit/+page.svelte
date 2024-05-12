@@ -1,14 +1,16 @@
 <script lang="ts">
     import axios from 'axios';
-    import { backendUrl } from '../../config';
-    import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label } from 'flowbite-svelte';
+    import { backendUrl, peerJSServerUrl } from '../../config';
+    import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label, ButtonGroup } from 'flowbite-svelte';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
 	import { onMount, createEventDispatcher } from 'svelte';
     import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn } from '../../stores';
-	import { PeerConnection } from '$lib/utils/peer';
 
     export let value: string = '';
     export let currentDocumentName: string = '';
+
+    let userNames = [$loggedUser.firstName];
+    let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
     function handleChange(event: Event) {
         const target = event.target as HTMLTextAreaElement;
@@ -41,12 +43,44 @@
             });
         }
     });
+
+    const connectToWebRTCUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
+        // start peer session first
+        import('$lib/utils/peer').then((peerModule) => {
+            peerModule.PeerConnection.startPeerSession().then((_) => {
+                users_list.forEach((user) => {
+                    userNames.push(user.username);
+                    userNames = userNames;
+                    console.log(userNames);
+                    peerModule.PeerConnection.connectPeer(user.webrtc_id).then(() => {
+                        $currentEditingDocument._id = userInputSessionID;
+                        console.log(`Connecting to user: ${user.username} with WEBRTC_ID: ${user.webrtc_id}`);
+                    });
+                });
+            });
+        });
+        
+    };
+
+    let userInputSessionID = '';
+    const connectToSession = async () => {
+        await axios.get(`${peerJSServerUrl}/get-users-list`, {
+            params: {
+                _id: userInputSessionID
+            }
+        })
+        .then((result) => {
+            console.log(result);
+            connectToWebRTCUserList(result.data.users_list);
+            
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+    };
     
 
     let isTextareaFocused = false;
-
-    let userNames = [$loggedUser.firstName];
-    let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
     let index = 0;
     const getNextColor = () => {
@@ -210,6 +244,19 @@
 
 <main>
     <div class="text-container"id="demo" role="button" tabindex="0">
+        <div class="pt-8">
+            <Label for="input-addon" class="mb-2">Connect to a shared session</Label>
+            <ButtonGroup class="w-full">
+              <Input id="input-addon" type="text" 
+                placeholder="session id" bind:value={userInputSessionID}
+              />
+              <Button color="primary"
+                on:click={() => connectToSession()}
+                
+              >Connect</Button>
+            </ButtonGroup>
+          </div>
+
         <form class="w-3/5">
             <label for="editor" class="sr-only">Publish post</label>
             <div id="info"></div>

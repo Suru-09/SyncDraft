@@ -1,4 +1,5 @@
 import Peer, {DataConnection} from "peerjs";
+import { peerJSServerUrl } from "../../config";
 
 let peer: Peer | undefined
 let connectionMap: Map<string, DataConnection> = new Map<string, DataConnection>()
@@ -7,7 +8,14 @@ export const PeerConnection = {
     getPeer: () => peer,
     startPeerSession: () => new Promise<string>((resolve, reject) => {
         try {
-            peer = new Peer()
+            peer = new Peer({
+                config: {'iceServers': [
+                    //{ url:  peerJSServerUrl.concat('/peerjs')},
+                    { urls: 'stun:stun.l.google.com:19302'  }, 
+                    { urls: 'stun:stun1.l.google.com:19302' }, 
+                    { urls: 'stun:stun2.l.google.com:19302' }, 
+                ]}
+            });
             peer.on('open', (id) => {
                 console.log('My ID: ' + id)
                 resolve(id)

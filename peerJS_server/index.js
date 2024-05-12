@@ -71,11 +71,27 @@ const appendUserToSession = (req, res) => {
 
 
 const removeUserFromSession = (req, res) => {
-  let _ = getSession(req.query._id);
-  sessions[req.body._id].users_list.push({
-    "username": req.body.doc_owner,
-    "webrtc_id": req.body.webrtc_id
-  });
+  let session = getSession(req.body._id);
+  
+  if (!session || session === undefined) {
+    throw new Error(`Session with given ID(${sessionID}) does not exist`);
+  }
+
+  const isUserAlreadyConnected = session.users_list.find((user) => user.username == req.body.doc_owner);
+  if (!isUserAlreadyConnected)
+  {
+    res.status(501).json({
+      status: "failure",
+      message: "User does not exist in the session..."
+    });
+  }
+  else {
+    session.users_list = session.users_list.filter((user) => user.username != req.body.doc_owner);
+    res.status(200).json({
+      status: "success",
+      message: "User removed from the session"
+    }); 
+  }
   
 };
 
@@ -95,7 +111,7 @@ const getSession = (id) => {
 app.post('/create-session', createSession);
 app.get('/get-users-list', getUsersList);
 app.post('/append-user-to-session', appendUserToSession);
-app.post('/remove-user-to-session', removeUserFromSession);
+app.post('/remove-user-from-session', removeUserFromSession);
 
 
 const server = app.listen(port, () => {
