@@ -8,7 +8,7 @@
     } from 'flowbite-svelte';
     import axios from 'axios';
     import {TrashBinOutline, EditOutline, ArrowLeftOutline, ArrowRightOutline } from 'flowbite-svelte-icons';
-    import { userDocuments, loggedUser, isAnyDocEdited, currentEditingDocument } from '../../stores';
+    import { userDocuments, loggedUser, isAnyDocEdited, currentEditingDocument, usersList } from '../../stores';
 
     let selected = 10;
     let pageSizes = [
@@ -69,6 +69,35 @@
         }
     }
 
+    const updateUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
+        $usersList = [$loggedUser.firstName];
+        users_list.forEach((user) => {
+            let user_name = user.username.split('@')[0];
+            if (user_name)
+            {
+                $usersList.push(user_name);
+                $usersList = $usersList;
+            }
+        });
+        console.log($usersList);
+    };
+
+    const getUsersAndUpdate = async () => {
+        await axios.get(`${peerJSServerUrl}/get-users-list`, {
+            params: {
+                _id: $currentEditingDocument._id
+            }
+        })
+        .then((result) => {
+            console.log(result);
+            updateUserList(result.data.users_list);
+            return result;
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+    };
+
     const createWEBRTCSession = async () => {
         // start the session\
         import('$lib/utils/peer').then((peerModule) => {
@@ -85,6 +114,33 @@
                 .catch((err) => {
                     console.log(err);
                 });
+
+                peerModule.PeerConnection.onIncomingConnection(function(conn) {
+                    console.log(`Hello there ${conn.peer}...!!`);
+                    getUsersAndUpdate();
+                });
+
+                let id = '';
+                const peer = peerModule.PeerConnection.getPeer();
+                if (peer !== undefined && peer.id !== undefined)
+                {
+                    id = peer.id;
+                }
+                peerModule.PeerConnection.onConnectionDisconnected(id, function() {
+                    console.log(`Bye mr: ${id}...!!`);
+                    getUsersAndUpdate();
+                });
+
+                
+            });
+        });
+    }
+
+    const closeWEBRTCSession = async () => {
+        // start the session\
+        import('$lib/utils/peer').then((peerModule) => {
+            peerModule.PeerConnection.closePeerSession().then(async () => {
+                console.log("WEBRTC session closed");
             });
         });
         
@@ -94,6 +150,11 @@
         // set current doc
         $isAnyDocEdited = true;
         $currentEditingDocument = $userDocuments[index];
+        // close any existing webrtc session!!!
+        // e.g. you join session, and you want to create yourself one,
+        // then you should delete the connection to the one hosted by
+        // somebody else
+        await closeWEBRTCSession();
         // only after completing the currentEditingDocument!!!!
         await createWEBRTCSession();
         
@@ -101,6 +162,10 @@
     }
 
     async function createNewDocument() {
+        // close existing connections,
+        // because there is only one access
+        // to the editor at the time
+        await closeWEBRTCSession();
         // set new doc
         $isAnyDocEdited = true;
         $currentEditingDocument = {

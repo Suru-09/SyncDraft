@@ -1,7 +1,7 @@
 <script>
     import {backendUrl} from '../../config.js';
     import axios from 'axios';
-    import { loggedIn, loggedUser } from '../../stores.js';
+    import { loggedIn, loggedUser, usersList } from '../../stores.js';
     import { Button, Label, Input, Alert } from 'flowbite-svelte';
     import { EyeOutline, EyeSlashOutline, InfoCircleSolid } from 'flowbite-svelte-icons';
     import { EnvelopeSolid } from 'flowbite-svelte-icons';
@@ -28,6 +28,11 @@
                 $loggedUser.lastName = response.data.last_name;
                 $loggedUser.password = response.data.password;
                 $loggedUser.username = response.data.username;
+
+                $usersList = [$loggedUser.firstName];
+
+                console.log("WTF");
+                console.log($usersList);
                 
                 // nice to see your documents once you have logged in.
                 // note: cannot use goto, because it does not refresh

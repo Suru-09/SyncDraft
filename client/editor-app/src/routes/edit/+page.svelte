@@ -4,12 +4,11 @@
     import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label, ButtonGroup } from 'flowbite-svelte';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
 	import { onMount, createEventDispatcher } from 'svelte';
-    import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn } from '../../stores';
+    import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList } from '../../stores';
 
     export let value: string = '';
     export let currentDocumentName: string = '';
 
-    let userNames = [$loggedUser.firstName];
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
     function handleChange(event: Event) {
@@ -24,42 +23,43 @@
         $currentEditingDocument.doc_name = currentDocumentName;
     }
   
-
     onMount(() => {
         value = $isAnyDocEdited ? $currentEditingDocument.body : '';
         currentDocumentName = $isAnyDocEdited ? $currentEditingDocument.doc_name : '';
+        console.log($usersList);
 
         // make sure when client leaves we delete the doc he was last editing.
         if (window && window !== undefined)
         {
             window.addEventListener('beforeunload', function (event) {
-                $isAnyDocEdited = false;
-                $currentEditingDocument = {
-                    "_id": "",
-                    "body": "",
-                    "doc_owner": "",
-                    "doc_name": "",
-                };
+                
             });
         }
     });
 
     const connectToWebRTCUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
         // start peer session first
-        import('$lib/utils/peer').then((peerModule) => {
-            peerModule.PeerConnection.startPeerSession().then((_) => {
+        import('$lib/utils/peer').then(async (peerModule) => {
+            peerModule.PeerConnection.startPeerSession().then(async (id) => {
+                $usersList = [$loggedUser.firstName];
                 users_list.forEach((user) => {
-                    userNames.push(user.username);
-                    userNames = userNames;
-                    console.log(userNames);
+                    $usersList.push(user.username);
+                    $usersList = $usersList;
+                    console.log($usersList);
+
                     peerModule.PeerConnection.connectPeer(user.webrtc_id).then(() => {
-                        $currentEditingDocument._id = userInputSessionID;
-                        console.log(`Connecting to user: ${user.username} with WEBRTC_ID: ${user.webrtc_id}`);
-                    });
+                            $currentEditingDocument._id = userInputSessionID;
+                            console.log(`Connecting to user: ${user.username} with WEBRTC_ID: ${user.webrtc_id}`);
+                    }); 
+                });
+
+                await axios.post(`${peerJSServerUrl}/append-user-to-session`, {
+                    _id: userInputSessionID,
+                    doc_owner: $loggedUser.username,
+                    webrtc_id: id
                 });
             });
         });
-        
     };
 
     let userInputSessionID = '';
@@ -69,10 +69,9 @@
                 _id: userInputSessionID
             }
         })
-        .then((result) => {
+        .then(async (result) => {
             console.log(result);
             connectToWebRTCUserList(result.data.users_list);
-            
         })
         .catch((err) => {
             console.log(err);
@@ -292,7 +291,7 @@
 
         <Listgroup active class="w-48">
             <h3 class="p-1 text-center text-xl font-medium text-gray-900 dark:text-white">User list</h3>
-            {#each userNames as userName}
+            {#each $usersList as userName}
                 <ListgroupItem class="text-base font-semibold gap-2">
                     <Avatar size="xs" />
                     <span style="color: {getNextColor()}">{userName}</span>
