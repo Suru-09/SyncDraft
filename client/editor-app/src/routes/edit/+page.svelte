@@ -1,10 +1,11 @@
 <script lang="ts">
     import axios from 'axios';
     import { backendUrl, peerJSServerUrl } from '../../config';
-    import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label, ButtonGroup } from 'flowbite-svelte';
+    import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label, ButtonGroup, Alert  } from 'flowbite-svelte';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
 	import { onMount, createEventDispatcher } from 'svelte';
     import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList } from '../../stores';
+    import { ClipboardSolid } from 'flowbite-svelte-icons';
 
     export let value: string = '';
     export let currentDocumentName: string = '';
@@ -239,57 +240,69 @@
         }
     };
 
+    const copyToClipboard = async ()=>
+    {
+        let id = ($currentEditingDocument._id !== "" ? $currentEditingDocument._id : 'Not a session');
+
+        await navigator.clipboard.writeText(id)
+
+    }
 </script>
 
 <main>
     <div class="text-container"id="demo" role="button" tabindex="0">
-        <div class="pt-8">
-            <Label for="input-addon" class="mb-2">Connect to a shared session</Label>
-            <ButtonGroup class="w-full">
-              <Input id="input-addon" type="text" 
-                placeholder="session id" bind:value={userInputSessionID}
-              />
-              <Button color="primary"
-                on:click={() => connectToSession()}
-                
-              >Connect</Button>
-            </ButtonGroup>
-          </div>
+        <div class="w-2/4">
+            <div class="pt-8" style="margin-bottom: 1rem;">
+                <Label for="input-addon" class="mb-2">Connect to a shared session</Label>
+                <ButtonGroup class="w-1/3">
+                <Input id="input-addon" type="text"
+                    placeholder="session id" bind:value={userInputSessionID}
+                />
+                <Button color="primary"
+                    on:click={() => connectToSession()}
 
-        <form class="w-3/5">
-            <label for="editor" class="sr-only">Publish post</label>
-            <div id="info"></div>
-            <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
-                on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}
-                bind:value={value} on:input={handleChange}
-                >
-              <Toolbar slot="header" embedded>
-                <ToolbarGroup>
-                    <Input type="text" id="doc_name" placeholder="Document name" 
-                        bind:value={currentDocumentName} on:input={handleDocNameChange} required 
-                    />
-                </ToolbarGroup>
-                <ToolbarGroup>
-                    <Label for="website" class="mb-2"> Document Owner: {$currentEditingDocument.doc_owner} </Label>
-                </ToolbarGroup>
-
-                <ToolbarGroup>
-                    <Label for="website" class="mb-2"> Session id: 
-                        {$currentEditingDocument._id !== "" ? $currentEditingDocument._id : 'Not a session'} 
-                    </Label>
-                </ToolbarGroup>
-              </Toolbar>
-            </Textarea>
-            <div>
-                <p class="numerics">Line: {line} | Column: {column}</p>
-                <Button on:click={() => saveDocument()}
-                    >
-                    Save document
-                </Button>
+                >Connect</Button>
+                </ButtonGroup>
             </div>
-        </form>
 
-        <Listgroup active class="w-48">
+            <form class="w-full">
+                <label for="editor" class="sr-only">Publish post</label>
+                <div id="info"></div>
+                <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
+                    on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}
+                    bind:value={value} on:input={handleChange}
+                    >
+                <Toolbar slot="header" embedded>
+                    <ToolbarGroup>
+                        <Input type="text" id="doc_name" placeholder="Document name"
+                            bind:value={currentDocumentName} on:input={handleDocNameChange} required
+                        />
+                    </ToolbarGroup>
+                    <ToolbarGroup>
+                        <Label for="website" class="mb-2"> Document Owner: {$currentEditingDocument.doc_owner} </Label>
+                    </ToolbarGroup>
+
+                    <ToolbarGroup>
+                        <Label for="website" class="mb-2"> Session id:
+                            {$currentEditingDocument._id !== "" ? $currentEditingDocument._id : 'Not a session'}
+                        </Label>
+                        <button on:click={copyToClipboard}>
+                            <ClipboardSolid size="md" style="margin-left: 5px; margin-bottom: 10px;"/>
+                        </button>
+                    </ToolbarGroup>
+                </Toolbar>
+                </Textarea>
+                <div>
+                    <p class="numerics">Line: {line} | Column: {column}</p>
+                    <Button on:click={() => saveDocument()}
+                        >
+                        Save document
+                    </Button>
+                </div>
+            </form>
+        </div>
+
+        <Listgroup active class="w-64">
             <h3 class="p-1 text-center text-xl font-medium text-gray-900 dark:text-white">User list</h3>
             {#each $usersList as userName}
                 <ListgroupItem class="text-base font-semibold gap-2">
