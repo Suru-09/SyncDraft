@@ -115,6 +115,7 @@ export const PeerConnection = {
             conn.on('data', function (receivedData) {
                 console.log("Receiving data from " + id)
                 let data = receivedData as string
+                console.log(`Data received is: ${data}`);
                 callback(data)
             })
         }
