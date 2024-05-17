@@ -6,9 +6,12 @@
 	import { onMount, createEventDispatcher } from 'svelte';
     import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList } from '../../stores';
     import { ClipboardSolid } from 'flowbite-svelte-icons';
+    import { LogootDocument, generateSiteId } from '$lib/utils/logoot';
 
     export let value: string = '';
     export let currentDocumentName: string = '';
+    let logootDocument = new LogootDocument();
+    let siteId = generateSiteId();
 
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
@@ -16,6 +19,7 @@
         const target = event.target as HTMLTextAreaElement;
         value = target.value;
         $currentEditingDocument.body = value;
+        onInputHandler(event);
     }
 
     function handleDocNameChange(event: Event) {
@@ -28,6 +32,12 @@
         value = $isAnyDocEdited ? $currentEditingDocument.body : '';
         currentDocumentName = $isAnyDocEdited ? $currentEditingDocument.doc_name : '';
         console.log($usersList);
+
+        let idx = 1;
+        [...$currentEditingDocument.body].forEach(character => {
+            logootDocument.insertAtIndex(siteId, character, idx);
+            idx++;
+        });
 
         // make sure when client leaves we delete the doc he was last editing.
         if (window && window !== undefined)
@@ -78,7 +88,40 @@
             console.log(err);
         });
     };
-    
+
+    let cursorPosition;
+
+    async function onInputHandler(event: any) {
+        let char = event.data;
+        console.log(`event is`);
+        console.log(event)
+        console.log(`data is ${char}`);
+        console.log(`textarea value is ${value}`);
+
+        cursorPosition = event.target.selectionStart;
+        console.log(`position is ${cursorPosition}`);
+        if (char != null) {
+            let insertOperation = logootDocument.insertAtIndex(siteId, char, cursorPosition);
+            console.log(insertOperation);
+            console.log(insertOperation.getJson())
+        } else if (event.inputType === 'deleteContentBackward') {
+            let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
+            console.log(deleteOperation);
+            console.log(deleteOperation.getJson())
+        }
+
+        console.log(logootDocument);
+
+        // try {
+        //     const res = await axios.post(`${backendUrl}/edit`, {
+        //         dt: event.data,
+        //         val: textareaValue,
+        //         pos: cursorPosition
+        //     });
+        // } catch (e) {
+        //     console.log(`error: ${e}`);
+        // }
+    }
 
     let isTextareaFocused = false;
 
