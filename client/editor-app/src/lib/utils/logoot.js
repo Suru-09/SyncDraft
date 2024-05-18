@@ -292,6 +292,31 @@ export class InsertOperation {
     getJson() {
         return JSON.stringify(this);
     }
+
+    /**
+     * Deserializes a json into an InsertOperation
+     * @param {string} json
+     */
+    static fromJSON(json) {
+        let parsed = JSON.parse(json);
+        
+        let identifiers = parsed["posId"]["identifiers"];
+        /**
+         * @type {Identifier[]}
+         */
+        let identifiersToInsert = [];
+        identifiers.forEach((/** @type {{ [x: string]: string; }} */ identifier) => {
+            let pos = parseInt(identifier["pos"]);
+            let siteId = parseInt(identifier["siteId"]);
+            identifiersToInsert.push(new Identifier(pos, siteId));
+        })
+        let clock = parseInt(parsed["posId"]["clock"]);
+        let siteId = parseInt(parsed["siteId"]);
+        let atom = parsed["atom"];
+        let posId = new PositionIdentifier(identifiersToInsert, clock);
+
+        return new InsertOperation(posId, atom, siteId);
+    }
 }
 
 /**
@@ -316,6 +341,30 @@ export class DeleteOperation {
     getJson() {
         return JSON.stringify(this);
     }
+
+    /**
+     * Deserializes a json into an DeleteOperation
+     * @param {string} json
+     */
+    static fromJSON(json) {
+        let parsed = JSON.parse(json);
+        
+        let identifiers = parsed["posId"]["identifiers"];
+        /**
+         * @type {Identifier[]}
+         */
+        let identifiersToInsert = [];
+        identifiers.forEach((/** @type {{ [x: string]: string; }} */ identifier) => {
+            let pos = parseInt(identifier["pos"]);
+            let siteId = parseInt(identifier["siteId"]);
+            identifiersToInsert.push(new Identifier(pos, siteId));
+        })
+        let clock = parseInt(parsed["posId"]["clock"]);
+        let siteId = parseInt(parsed["siteId"]);
+        let posId = new PositionIdentifier(identifiersToInsert, clock);
+
+        return new DeleteOperation(posId, siteId);
+    }
 }
 
 /**
@@ -339,31 +388,3 @@ export function generateSiteId() {
     return Math.floor(Math.random() * Math.pow(2, 64));  // Random 64-bit number
     
   }
-
-// let iden = new Identifier(0, 1);
-// console.log(iden.toString());
-// let iden2 = new Identifier(2, 3);
-// console.log(iden2);
-// console.log(iden.compareTo(iden2))
-// let posIden1 = new PositionIdentifier([ iden, iden2], 1);
-// console.log(`posIden1 at beginning: ${posIden1}`)
-// posIden1.addIdentifier(new Identifier(5, 5));
-// console.log(`posIden1 after add: ${posIden1.toString()}`)
-// let posIden2 = new PositionIdentifier([
-//     new Identifier(0, 1),
-//     new Identifier(2, 3),
-//     new Identifier(4, 5)
-// ], 2);
-// console.log(`posIden2: ${posIden2.toString()}`);
-// console.log(posIden1.compareTo(posIden2));
-
-// let logoot = new LogootDocument();
-// console.log(`\nlogoot at beginning:\n${logoot.toString()}\n`);
-// logoot.insert(posIden1, "aa");
-// console.log(`\nlogoot:\n${logoot.toString()}\n`);
-// logoot.insert(posIden2, "bb")
-// console.log(`\nlogoot:\n${logoot.toString()}\n`);
-// let newPos = logoot.generatePosition(10, posIden2, posIden1);
-// console.log(`newPos: ${newPos.toString()}`);
-// logoot.insert(newPos, "ccc");
-// console.log(`\nlogoot:\n${logoot.toString()}\n`);

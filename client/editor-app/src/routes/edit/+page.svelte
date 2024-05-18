@@ -6,7 +6,7 @@
 	import { onMount, createEventDispatcher } from 'svelte';
     import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList } from '../../stores';
     import { ChevronSortOutline, ClipboardSolid } from 'flowbite-svelte-icons';
-    import { LogootDocument, generateSiteId } from '$lib/utils/logoot';
+    import { LogootDocument, generateSiteId, InsertOperation, DeleteOperation } from '$lib/utils/logoot';
 	import type { DataConnection } from 'peerjs';
     
 
@@ -30,8 +30,18 @@
         $currentEditingDocument.doc_name = currentDocumentName;
     }
 
-    let onIncomingConnectionCallback = async (conn: DataConnection) => {
+    function updateTextAreaFromLogoot() {
+        let newValue = "";
+        logootDocument.lines.forEach((line) => {
+            if(line.atom != null) {
+                newValue = newValue.concat(line.atom);
+            }
+        });
 
+        value = newValue;
+    }
+
+    let onIncomingConnectionCallback = async (conn: DataConnection) => {
         // set the callback for receiving data for this peer
         const peerModule = await import('$lib/utils/peer');
         let peerConnection = peerModule.PeerConnection;
@@ -55,7 +65,6 @@
     };
 
     let onReceiveCallback = (data: string) => {
-        console.log(`RECEIVED ${data}`);
         let received = JSON.parse(data);
 
         if (received["type"] != undefined && received["type"] === "initial_payload") {
@@ -65,14 +74,17 @@
             $currentEditingDocument.doc_owner = docOwner;
             currentDocumentName = docName;
             // update logoot document
-            let lines = received["logoot_document"]["lines"];
             logootDocument.fromJSON(data);
             // update actual text
             value = received["current_document_info"]["body"];
-            console.log("OK")
-            console.log(logootDocument);
-            console.log("OK")
-
+        } else if (received["type"] === "insert") {
+            let insertOp = InsertOperation.fromJSON(data);
+            logootDocument.insert(insertOp.posId, insertOp.atom);
+            updateTextAreaFromLogoot();
+        } else if (received["type"] === "delete") {
+            let deleteOp = DeleteOperation.fromJSON(data);
+            logootDocument.delete(deleteOp.posId);
+            updateTextAreaFromLogoot()
         }
     }
 
