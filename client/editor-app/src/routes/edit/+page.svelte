@@ -5,8 +5,10 @@
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
 	import { onMount, createEventDispatcher } from 'svelte';
     import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList } from '../../stores';
-    import { ClipboardSolid } from 'flowbite-svelte-icons';
+    import { ChevronSortOutline, ClipboardSolid } from 'flowbite-svelte-icons';
     import { LogootDocument, generateSiteId } from '$lib/utils/logoot';
+	import type { DataConnection } from 'peerjs';
+    
 
     export let value: string = '';
     export let currentDocumentName: string = '';
@@ -27,12 +29,55 @@
         currentDocumentName = target.value;
         $currentEditingDocument.doc_name = currentDocumentName;
     }
-  
-    onMount(() => {
+
+    let onIncomingConnectionCallback = async (conn: DataConnection) => {
+
+        // set the callback for receiving data for this peer
+        const peerModule = await import('$lib/utils/peer');
+        let peerConnection = peerModule.PeerConnection;
+        peerConnection.onConnectionReceiveData(conn.peer, onReceiveCallback);
+        
+        let newPeerPayload = {
+            type: "initial_payload",
+            current_document_info: $currentEditingDocument,
+            logoot_document: logootDocument
+        };
+
+        conn.on('open', () => {
+            try {
+                const serializedPayload = JSON.stringify(newPeerPayload);
+                conn.send(serializedPayload);
+                console.log("Payload sent successfully");
+            } catch (error) {
+                console.error("Serialization Error: ", error);
+        }
+    });
+    };
+
+    let onReceiveCallback = (data: string) => {
+        console.log(`RECEIVED ${data}`);
+        let received = JSON.parse(data);
+
+        if (received["type"] != undefined && received["type"] === "initial_payload") {
+            // update document info
+            let docOwner = received["current_document_info"]["doc_owner"];
+            let docName = received["current_document_info"]["doc_name"];
+            $currentEditingDocument.doc_owner = docOwner;
+            currentDocumentName = docName;
+            console.log("OK")
+        }
+    }
+
+    onMount(async () => {
         value = $isAnyDocEdited ? $currentEditingDocument.body : '';
         currentDocumentName = $isAnyDocEdited ? $currentEditingDocument.doc_name : '';
         console.log($usersList);
 
+        const peerModule = await import('$lib/utils/peer');
+        let peerConnection = peerModule.PeerConnection;
+
+        peerConnection.onIncomingConnection(onIncomingConnectionCallback);
+        
         let idx = 1;
         [...$currentEditingDocument.body].forEach(character => {
             logootDocument.insertAtIndex(siteId, character, idx);
@@ -48,6 +93,17 @@
         }
     });
 
+    const broadcastData = async (data: string) => {
+        import('$lib/utils/peer').then(async (peerModule) => {
+            let map = peerModule.getConnectionMap();
+
+            map.forEach((_, peerId) => {
+                peerModule.PeerConnection.sendConnection(peerId, data);
+            })
+            
+        }
+    )};
+
     const connectToWebRTCUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
         // start peer session first
         import('$lib/utils/peer').then(async (peerModule) => {
@@ -58,10 +114,11 @@
                     $usersList = $usersList;
                     console.log($usersList);
 
-                    peerModule.PeerConnection.connectPeer(user.webrtc_id).then(() => {
+                    peerModule.PeerConnection.connectPeer(user.webrtc_id).then(async () => {
                             $currentEditingDocument._id = userInputSessionID;
                             console.log(`Connecting to user: ${user.username} with WEBRTC_ID: ${user.webrtc_id}`);
-                    }); 
+                            peerModule.PeerConnection.onConnectionReceiveData(user.webrtc_id, onReceiveCallback);
+                    });                    
                 });
 
                 await axios.post(`${peerJSServerUrl}/append-user-to-session`, {
@@ -87,6 +144,14 @@
         .catch((err) => {
             console.log(err);
         });
+
+        // setTimeout(() => {console.log("waiting 5 sec")}, 5000);
+        // let peerModule = await import('$lib/utils/peer');
+        // let map = peerModule.getConnectionMap();
+        // map.forEach((_, peerId) => {
+        //         peerModule.PeerConnection.onConnectionReceiveData(peerId, onReceiveCallback);
+        //     })
+        
     };
 
     let cursorPosition;
@@ -97,6 +162,7 @@
         console.log(event)
         console.log(`data is ${char}`);
         console.log(`textarea value is ${value}`);
+        console.log(`user session id is ${userInputSessionID}`)
 
         cursorPosition = event.target.selectionStart;
         console.log(`position is ${cursorPosition}`);
@@ -104,10 +170,12 @@
             let insertOperation = logootDocument.insertAtIndex(siteId, char, cursorPosition);
             console.log(insertOperation);
             console.log(insertOperation.getJson())
+            await broadcastData(insertOperation.getJson());
         } else if (event.inputType === 'deleteContentBackward') {
             let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
             console.log(deleteOperation);
             console.log(deleteOperation.getJson())
+            await broadcastData(deleteOperation.getJson());
         }
 
         console.log(logootDocument);

@@ -4,6 +4,10 @@ import { peerJSServerUrl } from "../../config";
 let peer: Peer | undefined
 let connectionMap: Map<string, DataConnection> = new Map<string, DataConnection>()
 
+export function getConnectionMap() {
+    return connectionMap;
+}
+
 export const PeerConnection = {
     getPeer: () => peer,
     startPeerSession: () => new Promise<string>((resolve, reject) => {

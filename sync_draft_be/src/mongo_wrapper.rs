@@ -91,9 +91,11 @@ impl MongoWrap {
     }
 
     pub async fn user_exists(&self, user: LoginUser, db_name: String, collection_name: String) -> Result<User, mongodb::error::Error> {
+        println!("HERE {}", self.mongodb_uri);
         let client = Client::with_uri_str(self.mongodb_uri.clone()).await?;
         let db = client.database(&db_name);
         let collection = db.collection::<User>(&collection_name);
+        println!("A{:?}", client);
 
         let filter = doc! {
             "username": user.username,
