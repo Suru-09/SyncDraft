@@ -64,7 +64,14 @@
             let docName = received["current_document_info"]["doc_name"];
             $currentEditingDocument.doc_owner = docOwner;
             currentDocumentName = docName;
+            // update logoot document
+            logootDocument.lines = received["logoot_document"]["lines"];
+            // update actual text
+            value = received["current_document_info"]["body"];
             console.log("OK")
+            console.log(logootDocument);
+            console.log("OK")
+
         }
     }
 
@@ -144,13 +151,6 @@
         .catch((err) => {
             console.log(err);
         });
-
-        // setTimeout(() => {console.log("waiting 5 sec")}, 5000);
-        // let peerModule = await import('$lib/utils/peer');
-        // let map = peerModule.getConnectionMap();
-        // map.forEach((_, peerId) => {
-        //         peerModule.PeerConnection.onConnectionReceiveData(peerId, onReceiveCallback);
-        //     })
         
     };
 
