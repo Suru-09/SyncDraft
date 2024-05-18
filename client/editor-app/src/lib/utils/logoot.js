@@ -119,6 +119,35 @@ export class LogootDocument {
     }
 
     /**
+     * Constructs a new LogootDocument from a JSON representation.
+     * @param {string} json
+     */
+    fromJSON(json) {
+        let parsed = JSON.parse(json);
+        this.lines = [];
+        let lines = parsed["logoot_document"]["lines"];
+
+        lines.forEach((/** @type {{ [x: string]: any; }} */ line) => {
+            let position = line["position"];
+            let identifiers = position["identifiers"];
+            /**
+             * @type {Identifier[]}
+             */
+            let identifiersToInsert = [];
+            identifiers.forEach((/** @type {{ [x: string]: string; }} */ identifier) => {
+                let pos = parseInt(identifier["pos"]);
+                let siteId = parseInt(identifier["siteId"]);
+                identifiersToInsert.push(new Identifier(pos, siteId));
+            })
+            let clock = parseInt(position["clock"]);
+            let atom = line["atom"];
+            let positionToInsert = new PositionIdentifier(identifiersToInsert, clock);
+
+            this.lines.push({position: positionToInsert, atom: atom});
+        })
+    }
+
+    /**
      * Generates a new positionIdentifier between prevPos and nextPos for this siteId
      * @param {number} siteId 
      * @param {PositionIdentifier} prevPos 

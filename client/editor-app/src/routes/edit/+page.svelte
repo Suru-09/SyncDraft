@@ -65,7 +65,8 @@
             $currentEditingDocument.doc_owner = docOwner;
             currentDocumentName = docName;
             // update logoot document
-            logootDocument.lines = received["logoot_document"]["lines"];
+            let lines = received["logoot_document"]["lines"];
+            logootDocument.fromJSON(data);
             // update actual text
             value = received["current_document_info"]["body"];
             console.log("OK")
