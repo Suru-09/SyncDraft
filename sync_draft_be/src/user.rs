@@ -73,6 +73,7 @@ pub mod user {
                     if mongo_err.to_string() == "WRONG_PASSWORD".to_string() {
                         return (StatusCode::UNAUTHORIZED, Json(User::new()))
                     }
+                    println!("{}", mongo_err);
                     return (StatusCode::NOT_FOUND, Json(User::new()))
                 }
             }

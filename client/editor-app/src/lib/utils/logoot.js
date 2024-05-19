@@ -3,6 +3,7 @@
 // https://github.com/usecanvas/logoot-js/blob/master/lib/logoot/sequence.js
 // https://github.com/ravern/logoot/blob/master/doc/doc.go
 
+const MAX_POS = 100;
 
 /**
  * The Identifier is a pair: <pos, siteId>
@@ -102,16 +103,48 @@ class PositionIdentifier {
  * The logoot document is composed of "lines", where each line is a pair: <pid, atom>, where
  * pid is a position identifier and an atom can be a character or a string.
  */
-class LogootDocument {
+export class LogootDocument {
     /**
      * Constructs a new LogootDocument.
      * Initializes with a beginning and an end line that serve as boundary markers.
      */
     constructor() {
+        const currentDate = new Date();
+        const timestamp = currentDate.getTime();
+
         this.lines = [
-            {position: new PositionIdentifier([new Identifier(0, -1)], -Infinity), atom: null}, // LB
-            {position: new PositionIdentifier([new Identifier(Infinity, -1)], Infinity), atom: null}, // LE
+            {position: new PositionIdentifier([new Identifier(0, -1)], timestamp), atom: null}, // LB
+            {position: new PositionIdentifier([new Identifier(MAX_POS, -1)], timestamp), atom: null}, // LE
         ];
+    }
+
+    /**
+     * Constructs a new LogootDocument from a JSON representation.
+     * @param {string} json
+     */
+    fromJSON(json) {
+        let parsed = JSON.parse(json);
+        this.lines = [];
+        let lines = parsed["logoot_document"]["lines"];
+
+        lines.forEach((/** @type {{ [x: string]: any; }} */ line) => {
+            let position = line["position"];
+            let identifiers = position["identifiers"];
+            /**
+             * @type {Identifier[]}
+             */
+            let identifiersToInsert = [];
+            identifiers.forEach((/** @type {{ [x: string]: string; }} */ identifier) => {
+                let pos = parseInt(identifier["pos"]);
+                let siteId = parseInt(identifier["siteId"]);
+                identifiersToInsert.push(new Identifier(pos, siteId));
+            })
+            let clock = parseInt(position["clock"]);
+            let atom = line["atom"];
+            let positionToInsert = new PositionIdentifier(identifiersToInsert, clock);
+
+            this.lines.push({position: positionToInsert, atom: atom});
+        })
     }
 
     /**
@@ -122,27 +155,31 @@ class LogootDocument {
      * @returns {PositionIdentifier} 
     */
     generatePosition(siteId, prevPos, nextPos) {
+        const currentDate = new Date();
+        const timestamp = currentDate.getTime();
+
+        prevPos = prevPos.identifiers.length > 0 ? prevPos : new PositionIdentifier([new Identifier(0, siteId)], timestamp);
+        nextPos = nextPos.identifiers.length > 0 ? nextPos : new PositionIdentifier([new Identifier(MAX_POS, siteId)], timestamp);
         let prevHead = prevPos.identifiers[0];
         let nextHead = nextPos.identifiers[0];
-        console.log(`PREVHEAD: ${prevHead}`)
-        console.log(`NEXTHEAD: ${nextHead}`)
 
         switch (prevHead.compareTo(nextHead)) {
             case -1: {
                 let diff = nextHead.pos - prevHead.pos;
                 if (diff > 1) {
-                    return new PositionIdentifier( [ new Identifier(randomIntBetween(prevHead.pos, nextHead.pos), siteId)], 0);
+                    return new PositionIdentifier( [ new Identifier(randomIntBetween(prevHead.pos, nextHead.pos), siteId)], timestamp);
                 } else if (diff === 1 && siteId > prevHead.siteId) {
-                    return new PositionIdentifier( [ new Identifier(prevHead.pos, siteId)], 0);
+                    return new PositionIdentifier( [ new Identifier(prevHead.pos, siteId)], timestamp);
                 } else {
                     let prevWithoutFirstElem = new PositionIdentifier(prevPos.identifiers.slice(1), prevPos.clock);
                     let nextWithoutFirstElem = new PositionIdentifier(nextPos.identifiers.slice(1), nextPos.clock);
-                    return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), 0);
+
+                    return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), timestamp);
                 }
             } case 0: {
                 let prevWithoutFirstElem = new PositionIdentifier(prevPos.identifiers.slice(1), prevPos.clock);
                 let nextWithoutFirstElem = new PositionIdentifier(nextPos.identifiers.slice(1), nextPos.clock);
-                return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), 0);
+                return new PositionIdentifier([prevHead].concat(this.generatePosition(siteId, prevWithoutFirstElem, nextWithoutFirstElem).identifiers), timestamp);
             } case 1: {
                 throw new Error('"Next" position was less than "previous" position.')
             }
@@ -178,7 +215,7 @@ class LogootDocument {
      */
     merge(other) {
         other.lines.forEach(line => {
-            if (line.position.identifiers[0].pos !== Infinity && line.position.identifiers[0].pos !== 0) {
+            if (line.position.identifiers[0].pos !== MAX_POS && line.position.identifiers[0].pos !== 0) {
                 const index = this.lines.findIndex(existingLine => existingLine.position.compareTo(line.position) === 0);
                 if (index === -1) {
                     this.insert(line.position, line.atom);
@@ -190,6 +227,39 @@ class LogootDocument {
     }
 
     /**
+     * Inserts a new character (atom) in the logoot document using the index which is taken from the cursor position.
+     * @param {number} siteId The siteId of this document.
+     * @param {string} atom The atom that will be inserted.
+     * @param {number} index The index at which to insert.
+     * @returns {InsertOperation} An InsertOperation corresponding to this insertion.
+     */
+    insertAtIndex(siteId, atom, index) {
+        let prevPos = this.lines[index - 1].position;
+        let nextPos = this.lines[index].position;
+        let newPos = this.generatePosition(siteId, prevPos, nextPos);
+        this.insert(newPos, atom);
+
+        let insertOperation = new InsertOperation(newPos, atom, siteId);
+        return insertOperation;
+    }
+
+    /**
+     * Removes a character from the logoot document using the index taken from the cursor position.
+     * @param {number} siteId The siteId of this document.
+     * @param {number} index The index at which to delete. 
+     * @returns {DeleteOperation} A DeleteOperation corresponding to this deletion. 
+     */
+    deleteAtIndex(siteId, index) {
+        // we need to increment the index because the logoot document always has LB at index 0
+        let entry = this.lines[index + 1];
+        let posId = entry.position;
+        this.delete(posId);
+        
+        let deleteOperation = new DeleteOperation(posId, siteId);
+        return deleteOperation;
+    }
+
+    /**
      * Converts the document to a string by concatenating all atoms.
      * @returns {string} - The string representation of the document.
      */
@@ -198,6 +268,104 @@ class LogootDocument {
     }
 }
 
+/**
+ * Logoot insert operation that is sent over the network.
+ */
+export class InsertOperation {
+    /**
+     * 
+     * @param {PositionIdentifier} posId The position identifier that was generated for the inserted atom. 
+     * @param {*} atom The inserted atom.
+     * @param {*} siteId The siteId of the client that generated this operation.
+     */
+    constructor(posId, atom, siteId) {
+        this.type = "insert";
+        this.posId = posId;
+        this.atom = atom;
+        this.siteId = siteId;
+    }
+
+    /**
+     * Return a json that corresponds to this operation, which will be sent over the network.
+     * @returns {string}
+     */
+    getJson() {
+        return JSON.stringify(this);
+    }
+
+    /**
+     * Deserializes a json into an InsertOperation
+     * @param {string} json
+     */
+    static fromJSON(json) {
+        let parsed = JSON.parse(json);
+        
+        let identifiers = parsed["posId"]["identifiers"];
+        /**
+         * @type {Identifier[]}
+         */
+        let identifiersToInsert = [];
+        identifiers.forEach((/** @type {{ [x: string]: string; }} */ identifier) => {
+            let pos = parseInt(identifier["pos"]);
+            let siteId = parseInt(identifier["siteId"]);
+            identifiersToInsert.push(new Identifier(pos, siteId));
+        })
+        let clock = parseInt(parsed["posId"]["clock"]);
+        let siteId = parseInt(parsed["siteId"]);
+        let atom = parsed["atom"];
+        let posId = new PositionIdentifier(identifiersToInsert, clock);
+
+        return new InsertOperation(posId, atom, siteId);
+    }
+}
+
+/**
+ * Logoot delete operation that is sent over the network.
+ */
+export class DeleteOperation {
+    /**
+     * 
+     * @param {PositionIdentifier} posId The position identifier of the deleted atom. 
+     * @param {*} siteId The siteId of the client that generated this operation.
+     */
+    constructor(posId, siteId) {
+        this.type = "delete";
+        this.posId = posId;
+        this.siteId = siteId;
+    }
+
+    /**
+     * Return a json that corresponds to this operation, which will be sent over the network.
+     * @returns {string}
+     */
+    getJson() {
+        return JSON.stringify(this);
+    }
+
+    /**
+     * Deserializes a json into an DeleteOperation
+     * @param {string} json
+     */
+    static fromJSON(json) {
+        let parsed = JSON.parse(json);
+        
+        let identifiers = parsed["posId"]["identifiers"];
+        /**
+         * @type {Identifier[]}
+         */
+        let identifiersToInsert = [];
+        identifiers.forEach((/** @type {{ [x: string]: string; }} */ identifier) => {
+            let pos = parseInt(identifier["pos"]);
+            let siteId = parseInt(identifier["siteId"]);
+            identifiersToInsert.push(new Identifier(pos, siteId));
+        })
+        let clock = parseInt(parsed["posId"]["clock"]);
+        let siteId = parseInt(parsed["siteId"]);
+        let posId = new PositionIdentifier(identifiersToInsert, clock);
+
+        return new DeleteOperation(posId, siteId);
+    }
+}
 
 /**
  * Return a random number between two others.
@@ -212,30 +380,11 @@ function randomIntBetween(min, max) {
     return Math.floor(Math.random() * (max - (min + 1))) + min + 1;
   }
 
-let iden = new Identifier(0, 1);
-console.log(iden.toString());
-let iden2 = new Identifier(2, 3);
-console.log(iden2);
-console.log(iden.compareTo(iden2))
-let posIden1 = new PositionIdentifier([ iden, iden2], 1);
-console.log(`posIden1 at beginning: ${posIden1}`)
-posIden1.addIdentifier(new Identifier(5, 5));
-console.log(`posIden1 after add: ${posIden1.toString()}`)
-let posIden2 = new PositionIdentifier([
-    new Identifier(0, 1),
-    new Identifier(2, 3),
-    new Identifier(4, 5)
-], 2);
-console.log(`posIden2: ${posIden2.toString()}`);
-console.log(posIden1.compareTo(posIden2));
-
-let logoot = new LogootDocument();
-console.log(`\nlogoot at beginning:\n${logoot.toString()}\n`);
-logoot.insert(posIden1, "aa");
-console.log(`\nlogoot:\n${logoot.toString()}\n`);
-logoot.insert(posIden2, "bb")
-console.log(`\nlogoot:\n${logoot.toString()}\n`);
-let newPos = logoot.generatePosition(10, posIden2, posIden1);
-console.log(`newPos: ${newPos.toString()}`);
-logoot.insert(newPos, "ccc");
-console.log(`\nlogoot:\n${logoot.toString()}\n`);
+/**
+ * Generate a siteId - a random 64-bit number.
+ * @returns {number} 
+ */
+export function generateSiteId() {
+    return Math.floor(Math.random() * Math.pow(2, 64));  // Random 64-bit number
+    
+  }

@@ -11,15 +11,20 @@ export const loggedUser = persisted('loggedUser', {
     "password": ""
 });
 
-export const userDocuments = writable([{
+export const userDocuments = persisted('userDocuments', [{
     "_id": "",
     "doc_name": "",
     "doc_owner": "",
     "body": "",
 }]);
 
-export const isAnyDocEdited = writable(false);
-export const currentEditingDocument = writable({
+export const usersList = writable([""]);
+
+export const isAnyDocEdited = persisted('isAnyDocEdited',false);
+export const connectedToSession = persisted('connectedToSession',false);
+export const isSessionStarted = persisted('isSessionStarted',false);
+
+export const currentEditingDocument = persisted('currentEditingDocument', {
     "_id": "",
     "doc_name": "",
     "doc_owner": "",

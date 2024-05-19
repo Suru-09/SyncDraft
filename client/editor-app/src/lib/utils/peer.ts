@@ -1,13 +1,25 @@
 import Peer, {DataConnection} from "peerjs";
+import { peerJSServerUrl } from "../../config";
 
 let peer: Peer | undefined
 let connectionMap: Map<string, DataConnection> = new Map<string, DataConnection>()
+
+export function getConnectionMap() {
+    return connectionMap;
+}
 
 export const PeerConnection = {
     getPeer: () => peer,
     startPeerSession: () => new Promise<string>((resolve, reject) => {
         try {
-            peer = new Peer()
+            peer = new Peer({
+                config: {'iceServers': [
+                    //{ url:  peerJSServerUrl.concat('/peerjs')},
+                    { urls: 'stun:stun.l.google.com:19302'  }, 
+                    { urls: 'stun:stun1.l.google.com:19302' }, 
+                    { urls: 'stun:stun2.l.google.com:19302' }, 
+                ]}
+            });
             peer.on('open', (id) => {
                 console.log('My ID: ' + id)
                 resolve(id)
@@ -95,6 +107,20 @@ export const PeerConnection = {
         }
         resolve()
     }),
+    newConnections: (id: string, data: Array<string>): Promise<void> => new Promise((resolve, reject) => {
+        if (!connectionMap.has(id)) {
+            reject(new Error("Connection didn't exist"))
+        }
+        try {
+            let conn = connectionMap.get(id);
+            if (conn) {
+                conn.send(data)
+            }
+        } catch (err) {
+            reject(err)
+        }
+        resolve()
+    }),
     onConnectionReceiveData: (id: string, callback: (f: string) => void) => {
         if (!peer) {
             throw new Error("Peer doesn't start yet")
@@ -107,6 +133,7 @@ export const PeerConnection = {
             conn.on('data', function (receivedData) {
                 console.log("Receiving data from " + id)
                 let data = receivedData as string
+                console.log(`Data received is: ${data}`);
                 callback(data)
             })
         }
