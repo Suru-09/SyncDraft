@@ -4,7 +4,7 @@
 	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button } from 'flowbite-svelte';
     import { FacebookSolid, GithubSolid, DiscordSolid, TwitterSolid } from 'flowbite-svelte-icons';
 	import { DarkMode } from 'flowbite-svelte';
-	import { loggedIn, userDocuments, loggedUser } from '../stores.js';
+	import { loggedIn, userDocuments, loggedUser,isAnyDocEdited, currentEditingDocument, usersList } from '../stores.js';
 	import { ArrowLeftToBracketOutline } from 'flowbite-svelte-icons';
 	import Logo from "$lib/assets/logo.png"
 
@@ -14,6 +14,14 @@
 		$loggedIn = false;
 		$userDocuments = [];
 		$loggedUser = {firstName: "", lastName: "", username: "", password: ""};
+        $isAnyDocEdited = false;
+        $currentEditingDocument = {
+            "_id": "",
+            "doc_name": "",
+            "doc_owner": "",
+            "body": "",
+        };
+        $usersList = [];
 		location.reload();
 	}
 

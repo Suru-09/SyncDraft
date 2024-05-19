@@ -4,10 +4,9 @@
     import { Textarea, Toolbar, ToolbarGroup, Button, Input, Label, ButtonGroup, Alert  } from 'flowbite-svelte';
     import { Listgroup, ListgroupItem, Avatar } from 'flowbite-svelte';
 	import { onMount, createEventDispatcher } from 'svelte';
-    import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList } from '../../stores';
-    import { ChevronSortOutline, ClipboardSolid } from 'flowbite-svelte-icons';
+    import { currentEditingDocument, isAnyDocEdited, loggedUser, loggedIn, usersList, isSessionStarted, connectedToSession } from '../../stores';
+    import { ChevronSortOutline, ClipboardSolid, InfoCircleSolid } from 'flowbite-svelte-icons';
     import { LogootDocument, generateSiteId, InsertOperation, DeleteOperation } from '$lib/utils/logoot';
-	import type { DataConnection } from 'peerjs';
     
 
     export let value: string = '';
@@ -39,39 +38,142 @@
         });
 
         value = newValue;
+        $currentEditingDocument.body = newValue;
     }
 
-    let onIncomingConnectionCallback = async (conn: DataConnection) => {
+    const updateUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
+        let logged_username = $loggedUser.username.split('@')[0];
+        if (logged_username)
+        {
+            $usersList = [logged_username];
+        }
+        users_list.forEach((user) => {
+            let user_name = user.username.split('@')[0];
+            if (user_name && !$usersList.find((user) => user === user_name))
+            {
+                $usersList.push(user_name);
+                $usersList = $usersList;
+            }
+        });
+        console.log($usersList);
+    };
+
+    const getUsersAndUpdate = async () => {
+        await axios.get(`${peerJSServerUrl}/get-users-list`, {
+            params: {
+                _id: $currentEditingDocument._id
+            }
+        })
+        .then((result) => {
+            console.log(result);
+            updateUserList(result.data.users_list);
+            return result;
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+    };
+
+    const createWEBRTCSession = async () => {
+        if ($isSessionStarted || $connectedToSession)
+        {
+            return;
+        }
+
+        // start the session\
+        import('$lib/utils/peer').then((peerModule) => {
+            peerModule.PeerConnection.startPeerSession().then(async () => {
+                const webrtcID = peerModule.PeerConnection.getPeer()?.id;
+                await axios.post(`${peerJSServerUrl}/create-session`, {
+                    "_id": $currentEditingDocument._id,
+                    "doc_owner": $currentEditingDocument.doc_owner,
+                    "webrtc_id": webrtcID
+                })
+                .then((result) => {
+                    console.log(result);
+                    $isSessionStarted = true;
+                })
+                .catch((err) => {
+                    console.log(err);
+                });
+
+                peerModule.PeerConnection.onIncomingConnection(function(conn) {
+                    console.log(`Hello there ${conn.peer}...!!`);
+                    peerModule.PeerConnection.onConnectionReceiveData(conn.peer, onReceiveCallback);
+
+                    let newPeerPayload = {
+                        type: "initial_payload",
+                        current_document_info: $currentEditingDocument,
+                        logoot_document: logootDocument
+                    };
+
+                    conn.on('open', () => {
+                        broadCastNewConnections([conn.peer]);
+                        getUsersAndUpdate();
+                        console.log("User list updated");
+                        try {
+                            const serializedPayload = JSON.stringify(newPeerPayload);
+                            conn.send(serializedPayload);
+                            console.log("Payload sent successfully");
+                            console.log(serializedPayload);
+                        } catch (error) {
+                            console.error("Serialization Error: ", error);
+                        }
+                    });
+                });
+
+                let id = '';
+                const peer = peerModule.PeerConnection.getPeer();
+                if (peer !== undefined && peer.id !== undefined)
+                {
+                    id = peer.id;
+                }
+                peerModule.PeerConnection.onConnectionDisconnected(id, function() {
+                    console.log(`Bye mr: ${id}...!!`);
+                    getUsersAndUpdate();
+                });
+                
+            });
+        });
+    }
+
+    const closeWEBRTCSession = async () => {
+        // start the session\
+        import('$lib/utils/peer').then((peerModule) => {
+            peerModule.PeerConnection.closePeerSession().then(async () => {
+                console.log("WEBRTC session closed");
+            });
+        });
+        
+    }
+
+    let onIncomingConnectionCallback = async (conn: any) => {
         // set the callback for receiving data for this peer
         const peerModule = await import('$lib/utils/peer');
         let peerConnection = peerModule.PeerConnection;
         peerConnection.onConnectionReceiveData(conn.peer, onReceiveCallback);
-        
-        let newPeerPayload = {
-            type: "initial_payload",
-            current_document_info: $currentEditingDocument,
-            logoot_document: logootDocument
-        };
 
         conn.on('open', () => {
             try {
-                const serializedPayload = JSON.stringify(newPeerPayload);
-                conn.send(serializedPayload);
-                console.log("Payload sent successfully");
+                console.log("Incoming connection for not master : ");
+                console.log(conn.peer);
             } catch (error) {
                 console.error("Serialization Error: ", error);
         }
     });
     };
 
-    let onReceiveCallback = (data: string) => {
+    let onReceiveCallback = async (data: string) => {
         let received = JSON.parse(data);
+        console.log("Received on callback: ");
+        console.log(received);
 
         if (received["type"] != undefined && received["type"] === "initial_payload") {
             // update document info
             let docOwner = received["current_document_info"]["doc_owner"];
             let docName = received["current_document_info"]["doc_name"];
             $currentEditingDocument.doc_owner = docOwner;
+            $currentEditingDocument.body = received["current_document_info"]["body"];
             currentDocumentName = docName;
             // update logoot document
             logootDocument.fromJSON(data);
@@ -85,6 +187,10 @@
             let deleteOp = DeleteOperation.fromJSON(data);
             logootDocument.delete(deleteOp.posId);
             updateTextAreaFromLogoot()
+        } else if (received["type"] === "newConnections") {
+            const peers: Array<string> = received["peers"];
+            console.log(`Broad cast received with peers: ${peers}`);
+            await connectToNewUsers(peers);
         }
     }
 
@@ -93,11 +199,6 @@
         currentDocumentName = $isAnyDocEdited ? $currentEditingDocument.doc_name : '';
         console.log($usersList);
 
-        const peerModule = await import('$lib/utils/peer');
-        let peerConnection = peerModule.PeerConnection;
-
-        peerConnection.onIncomingConnection(onIncomingConnectionCallback);
-        
         let idx = 1;
         [...$currentEditingDocument.body].forEach(character => {
             logootDocument.insertAtIndex(siteId, character, idx);
@@ -119,26 +220,114 @@
 
             map.forEach((_, peerId) => {
                 peerModule.PeerConnection.sendConnection(peerId, data);
-            })
-            
+            }); 
         }
     )};
 
+    export const broadCastNewConnections = async (users_list: Array<string>) => {
+        import('$lib/utils/peer').then(async (peerModule) => {
+            let map = peerModule.getConnectionMap();
+            let json_stringy = JSON.stringify({
+                type: new String('newConnections'),
+                peers: users_list
+            });
+
+            console.log("Connection map: ");
+            console.log(map);
+
+            map.forEach(async (_, peerId) => {
+                await peerModule.PeerConnection.sendConnection(peerId, json_stringy);
+            }); 
+        })
+    }
+
+    const connectToNewUsers = async (peerConnections: Array<string>) => {
+        console.log(`Connecting to new users: ${peerConnections}`);
+        import('$lib/utils/peer').then(async (peerModule) => {
+                peerConnections.forEach(async (peerID) => {
+                    let currentPeerID = '';
+                    const peer = peerModule.PeerConnection.getPeer();
+                    if (peer !== undefined)
+                    {
+                        currentPeerID = peer.id;
+                    }
+                    //peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
+                    if (!peerModule.getConnectionMap().get(peerID) &&  peerID !== currentPeerID)
+                    {
+                        peerModule.PeerConnection.connectPeer(peerID).then(async () => {
+                            console.log(`Connecting to user: IDK with WEBRTC_ID: ${peerID}`);
+                            peerModule.PeerConnection.onConnectionReceiveData(peerID, onReceiveCallback);
+                        });
+                    }
+                });
+
+                // update users_list
+                let logged_username = $loggedUser.username.split('@')[0];
+                if (logged_username)
+                {
+                    $usersList = [logged_username];
+                }
+                else {
+                    $usersList = [];
+                }
+
+                await axios.get(`${peerJSServerUrl}/get-users-list`, {
+                params: {
+                    _id: userInputSessionID
+                }
+                }).then((result)=> {
+                    let users_list: Array<{"username": "", "webrtc_id": ""}> = result.data.users_list;
+                    users_list.forEach((user) => {
+                        let user_name = user.username.split('@')[0];
+                        if (user_name && !$usersList.find((user) => user === user_name))
+                        {
+                            $usersList.push(user_name);
+                            $usersList = $usersList;
+                        }
+                        console.log($usersList);                   
+                    });
+                });
+        });
+    };
+
     const connectToWebRTCUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
         // start peer session first
-        import('$lib/utils/peer').then(async (peerModule) => {
-            peerModule.PeerConnection.startPeerSession().then(async (id) => {
-                $usersList = [$loggedUser.firstName];
-                users_list.forEach((user) => {
-                    $usersList.push(user.username);
-                    $usersList = $usersList;
+        return import('$lib/utils/peer').then(async (peerModule) => {
+            return peerModule.PeerConnection.startPeerSession().then(async (id) => {
+                let logged_username = $loggedUser.username.split('@')[0];
+                if (logged_username)
+                {
+                    $usersList = [logged_username];
+                }
+                else {
+                    $usersList = [];
+                }
+                users_list.forEach(async (user) => {
+                    let user_name = user.username.split('@')[0];
+                    if (user_name && !$usersList.find((user) => user === user_name))
+                    {
+                        $usersList.push(user_name);
+                        $usersList = $usersList;
+                    }
                     console.log($usersList);
+                    
+                    let currentPeerID = '';
+                    const peer = peerModule.PeerConnection.getPeer();
+                    if (peer !== undefined)
+                    {
+                        currentPeerID = peer.id;
+                    }
+                    peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
 
-                    peerModule.PeerConnection.connectPeer(user.webrtc_id).then(async () => {
+                    if(!peerModule.getConnectionMap().get(user.webrtc_id) && currentPeerID !== user.webrtc_id)
+                    {
+                        await peerModule.PeerConnection.connectPeer(user.webrtc_id).then(async () => {
                             $currentEditingDocument._id = userInputSessionID;
                             console.log(`Connecting to user: ${user.username} with WEBRTC_ID: ${user.webrtc_id}`);
                             peerModule.PeerConnection.onConnectionReceiveData(user.webrtc_id, onReceiveCallback);
-                    });                    
+                        });
+                    }
+                    
                 });
 
                 await axios.post(`${peerJSServerUrl}/append-user-to-session`, {
@@ -146,6 +335,8 @@
                     doc_owner: $loggedUser.username,
                     webrtc_id: id
                 });
+
+                return id;
             });
         });
     };
@@ -159,7 +350,9 @@
         })
         .then(async (result) => {
             console.log(result);
-            connectToWebRTCUserList(result.data.users_list);
+            const peerID: string = await connectToWebRTCUserList(result.data.users_list);
+            // let the session owner know about the new connection.
+            $connectedToSession = true;
         })
         .catch((err) => {
             console.log(err);
@@ -387,6 +580,16 @@
 
                 >Connect</Button>
                 </ButtonGroup>
+                <Button on:click={createWEBRTCSession}>
+                    Start session
+                </Button>
+                {#if $isSessionStarted}
+                    <Alert dismissable>
+                        <InfoCircleSolid slot="icon" class="w-5 h-5" />
+                        You have started a new session.
+                    </Alert>
+		        {/if}
+                
             </div>
 
             <form class="w-full">
@@ -408,7 +611,7 @@
 
                     <ToolbarGroup>
                         <Label for="website" class="mb-2"> Session id:
-                            {$currentEditingDocument._id !== "" ? $currentEditingDocument._id : 'Not a session'}
+                            {$currentEditingDocument._id !== "" && ($isSessionStarted || $connectedToSession) ? $currentEditingDocument._id : 'Not a session'}
                         </Label>
                         <button on:click={copyToClipboard}>
                             <ClipboardSolid size="md" style="margin-left: 5px; margin-bottom: 10px;"/>

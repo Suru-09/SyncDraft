@@ -107,6 +107,20 @@ export const PeerConnection = {
         }
         resolve()
     }),
+    newConnections: (id: string, data: Array<string>): Promise<void> => new Promise((resolve, reject) => {
+        if (!connectionMap.has(id)) {
+            reject(new Error("Connection didn't exist"))
+        }
+        try {
+            let conn = connectionMap.get(id);
+            if (conn) {
+                conn.send(data)
+            }
+        } catch (err) {
+            reject(err)
+        }
+        resolve()
+    }),
     onConnectionReceiveData: (id: string, callback: (f: string) => void) => {
         if (!peer) {
             throw new Error("Peer doesn't start yet")
