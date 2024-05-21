@@ -382,6 +382,11 @@
             console.log(deleteOperation);
             console.log(deleteOperation.getJson())
             await broadcastData(deleteOperation.getJson());
+        } else if (event.inputType === 'insertLineBreak') {
+            let insertOperation = logootDocument.insertAtIndex(siteId, '\n', cursorPosition);
+            console.log(insertOperation);
+            console.log(insertOperation.getJson())
+            await broadcastData(insertOperation.getJson());
         }
 
         console.log(logootDocument);
