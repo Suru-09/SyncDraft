@@ -13,6 +13,8 @@
     export let currentDocumentName: string = '';
     let logootDocument = new LogootDocument();
     let siteId = generateSiteId();
+    let selectedText = '';
+    let previousValue = '';
 
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
@@ -21,6 +23,11 @@
         value = target.value;
         $currentEditingDocument.body = value;
         onInputHandler(event);
+    }
+
+    function handleMouseUp(event: any) {
+        const textarea = event.target;
+        selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
     }
 
     function handleDocNameChange(event: Event) {
@@ -369,25 +376,46 @@
         console.log(`data is ${char}`);
         console.log(`textarea value is ${value}`);
         console.log(`user session id is ${userInputSessionID}`)
+        console.log(`selection start is ${event.target.selectionStart}`)
+        console.log(`selection end is ${event.target.selectionEnd}`)
 
         cursorPosition = event.target.selectionStart;
         console.log(`position is ${cursorPosition}`);
+
+        const textarea = event.target;
+        const currentValue = textarea.value;
+
         if (char != null) {
             let insertOperation = logootDocument.insertAtIndex(siteId, char, cursorPosition);
             console.log(insertOperation);
-            console.log(insertOperation.getJson())
+            console.log(insertOperation.getJson());
             await broadcastData(insertOperation.getJson());
         } else if (event.inputType === 'deleteContentBackward') {
-            let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
-            console.log(deleteOperation);
-            console.log(deleteOperation.getJson())
-            await broadcastData(deleteOperation.getJson());
+            // handle case when selected text is deleted
+            if (currentValue.length < previousValue.length) {
+                const start = textarea.selectionStart;
+                let deletedText = previousValue.slice(start, start + (previousValue.length - currentValue.length));
+                console.log(`deleted text is ${deletedText}`);
+                for(let i = cursorPosition; i < cursorPosition + deletedText.length; i++) {
+                    console.log(`I IS ${i}`);
+                    let deleteOperation = logootDocument.deleteAtIndex(siteId, start);
+                    console.log(deleteOperation);
+                    console.log(deleteOperation.getJson());
+                    await broadcastData(deleteOperation.getJson());
+                } 
+            } else {
+                let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
+                console.log(deleteOperation);
+                console.log(deleteOperation.getJson());
+                await broadcastData(deleteOperation.getJson());
+            }
         } else if (event.inputType === 'insertLineBreak') {
             let insertOperation = logootDocument.insertAtIndex(siteId, '\n', cursorPosition);
             console.log(insertOperation);
-            console.log(insertOperation.getJson())
+            console.log(insertOperation.getJson());
             await broadcastData(insertOperation.getJson());
         }
+        previousValue = currentValue;
 
         console.log(logootDocument);
 
@@ -602,7 +630,7 @@
                 <div id="info"></div>
                 <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
                     on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}
-                    bind:value={value} on:input={handleChange}
+                    bind:value={value} on:input={handleChange} on:mouseup={handleMouseUp}
                     >
                 <Toolbar slot="header" embedded>
                     <ToolbarGroup>
