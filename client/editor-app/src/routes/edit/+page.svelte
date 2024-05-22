@@ -87,6 +87,8 @@
             return;
         }
 
+        await closeWEBRTCSession();
+
         // start the session\
         import('$lib/utils/peer').then((peerModule) => {
             peerModule.PeerConnection.startPeerSession().then(async () => {
@@ -145,13 +147,17 @@
     }
 
     const closeWEBRTCSession = async () => {
-        // start the session\
         import('$lib/utils/peer').then((peerModule) => {
             peerModule.PeerConnection.closePeerSession().then(async () => {
                 console.log("WEBRTC session closed");
             });
         });
-        
+
+        await axios.post(`${peerJSServerUrl}/remove-session`, {
+                _id: userInputSessionID
+            }).then((result)=> {
+                console.log(`Session has been removed: ${result.data}`)
+            });   
     }
 
     let onIncomingConnectionCallback = async (conn: any) => {
@@ -159,15 +165,6 @@
         const peerModule = await import('$lib/utils/peer');
         let peerConnection = peerModule.PeerConnection;
         peerConnection.onConnectionReceiveData(conn.peer, onReceiveCallback);
-
-        conn.on('open', () => {
-            try {
-                console.log("Incoming connection for not master : ");
-                console.log(conn.peer);
-            } catch (error) {
-                console.error("Serialization Error: ", error);
-        }
-    });
     };
 
     let onReceiveCallback = async (data: string) => {
@@ -225,6 +222,9 @@
         import('$lib/utils/peer').then(async (peerModule) => {
             let map = peerModule.getConnectionMap();
 
+            console.log("Connection map[broadcastData]: ");
+            console.log(map);
+
             map.forEach((_, peerId) => {
                 peerModule.PeerConnection.sendConnection(peerId, data);
             }); 
@@ -251,6 +251,7 @@
     const connectToNewUsers = async (peerConnections: Array<string>) => {
         console.log(`Connecting to new users: ${peerConnections}`);
         import('$lib/utils/peer').then(async (peerModule) => {
+                peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
                 peerConnections.forEach(async (peerID) => {
                     let currentPeerID = '';
                     const peer = peerModule.PeerConnection.getPeer();
@@ -258,11 +259,9 @@
                     {
                         currentPeerID = peer.id;
                     }
-                    //peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
-                    if (!peerModule.getConnectionMap().get(peerID) &&  peerID !== currentPeerID)
-                    {
-                        peerModule.PeerConnection.connectPeer(peerID).then(async () => {
-                            console.log(`Connecting to user: IDK with WEBRTC_ID: ${peerID}`);
+
+                    if (!peerModule.getConnectionMap().get(peerID) &&  peerID !== currentPeerID) {
+                        await peerModule.PeerConnection.connectPeer(peerID).then(async () => {
                             peerModule.PeerConnection.onConnectionReceiveData(peerID, onReceiveCallback);
                         });
                     }
@@ -300,6 +299,7 @@
     const connectToWebRTCUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
         // start peer session first
         return import('$lib/utils/peer').then(async (peerModule) => {
+            peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
             return peerModule.PeerConnection.startPeerSession().then(async (id) => {
                 let logged_username = $loggedUser.username.split('@')[0];
                 if (logged_username)
@@ -324,7 +324,6 @@
                     {
                         currentPeerID = peer.id;
                     }
-                    peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
 
                     if(!peerModule.getConnectionMap().get(user.webrtc_id) && currentPeerID !== user.webrtc_id)
                     {
@@ -334,7 +333,6 @@
                             peerModule.PeerConnection.onConnectionReceiveData(user.webrtc_id, onReceiveCallback);
                         });
                     }
-                    
                 });
 
                 await axios.post(`${peerJSServerUrl}/append-user-to-session`, {
@@ -416,18 +414,7 @@
             await broadcastData(insertOperation.getJson());
         }
         previousValue = currentValue;
-
         console.log(logootDocument);
-
-        // try {
-        //     const res = await axios.post(`${backendUrl}/edit`, {
-        //         dt: event.data,
-        //         val: textareaValue,
-        //         pos: cursorPosition
-        //     });
-        // } catch (e) {
-        //     console.log(`error: ${e}`);
-        // }
     }
 
     let isTextareaFocused = false;
@@ -439,7 +426,7 @@
     }
 
     let cursors = [
-        {"position": 0, "username": $loggedUser.firstName, "color": getNextColor()},
+        {"position": 0, "username": $loggedUser.username.split("@")[0], "color": getNextColor()},
     ];
 
     function handleTextareaFocus() {
@@ -456,7 +443,7 @@
     function getCursor(event: any) {
         let x = event.clientX;
         let y = event.clientY;
-        let _position = $loggedUser.firstName;
+        let _position = $loggedUser.username.split("@")[0];
 
         let index_x = event.target.selectionEnd;
 

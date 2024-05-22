@@ -2,65 +2,90 @@
 	import '../app.pcss';
 	import { page } from '$app/stores';
 	import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button } from 'flowbite-svelte';
-    import { FacebookSolid, GithubSolid, DiscordSolid, TwitterSolid } from 'flowbite-svelte-icons';
 	import { DarkMode } from 'flowbite-svelte';
-	import { loggedIn, userDocuments, loggedUser,isAnyDocEdited, currentEditingDocument, usersList } from '../stores.js';
+	import {
+		loggedIn,
+		isSessionStarted,
+		userDocuments,
+		loggedUser,
+		isAnyDocEdited,
+		currentEditingDocument,
+		usersList
+	} from '../stores.js';
 	import { ArrowLeftToBracketOutline } from 'flowbite-svelte-icons';
-	import Logo from "$lib/assets/logo.png"
+	import Logo from '$lib/assets/logo.png';
+    import axios from 'axios';
+    import {peerJSServerUrl} from '../config';
 
-	let username = $loggedUser.firstName;
+	let username = $loggedUser.username.split('@')[0];;
 
-	const logout = () => {
+	const logout = async () => {
+        import('$lib/utils/peer').then(async (peerModule) => {
+            peerModule.PeerConnection.closePeerSession();
+        });
+
+        const url = $loggedUser.username == $currentEditingDocument.doc_owner && isSessionStarted ? 
+            `${peerJSServerUrl}/remove-session`: `${peerJSServerUrl}/remove-user-from-session`;
+        await axios.post(url, {
+            _id: $currentEditingDocument._id,
+            doc_owner: $loggedUser.username
+        }).then((result)=> {
+            console.log(`Session has been removed: ${result.data}`);
+        }).catch(() => {}); 
+
 		$loggedIn = false;
 		$userDocuments = [];
-		$loggedUser = {firstName: "", lastName: "", username: "", password: ""};
-        $isAnyDocEdited = false;
-        $currentEditingDocument = {
-            "_id": "",
-            "doc_name": "",
-            "doc_owner": "",
-            "body": "",
-        };
-        $usersList = [];
+		$loggedUser = { firstName: '', lastName: '', username: '', password: '' };
+		$isAnyDocEdited = false;
+		$currentEditingDocument = {
+			_id: '',
+			doc_name: '',
+			doc_owner: '',
+			body: ''
+		};
+		$isSessionStarted = false;
+		$usersList = [];
 		location.reload();
-	}
+	};
 
-	
 	$: activeUrl = $page.url.pathname;
 </script>
 
 <nav>
 	<Navbar class="border-b">
 		<NavBrand href="/">
-		  <img src="{Logo}" class="size-16 mr-4" alt="SyncDraft Logo" />
-		  <span class="self-center whitespace-nowrap text-2xl font-bold dark:text-white">SyncDraft</span>
+			<img src={Logo} class="mr-4 size-16" alt="SyncDraft Logo" />
+			<span class="self-center whitespace-nowrap text-2xl font-bold dark:text-white">SyncDraft</span
+			>
 		</NavBrand>
-		<NavHamburger/>
+		<NavHamburger />
 		<NavUl {activeUrl} ulClass="flex items-center space-x-4 text-xl">
-		  <NavLi href="/edit"> Editor </NavLi>
-		  <NavLi href="/documents"> Documents </NavLi>
-		  {#if $loggedIn}
-			<p>Hello, {username}!</p>
-			<NavLi>
-				<Button color="alternative" class="outline-none border-hidden border-transparent focus:border-transparent focus:ring-0" on:click={logout}>
-					<span class="self-center font-normal text-xl whitespace-nowrap mr-3"> Log out </span>
-					<ArrowLeftToBracketOutline/>
-				</Button>
-			</NavLi>
-		  {:else}
-			<NavLi href="/signup"> Sign Up</NavLi>
-			<NavLi href="/login"> Login </NavLi>
-		  {/if}
-		  <NavLi> <DarkMode/> </NavLi>
+			<NavLi href="/edit">Editor</NavLi>
+			<NavLi href="/documents">Documents</NavLi>
+			{#if $loggedIn}
+				<p>Hello, {username}!</p>
+				<NavLi>
+					<Button
+						color="alternative"
+						class="border-hidden border-transparent outline-none focus:border-transparent focus:ring-0"
+						on:click={logout}
+					>
+						<span class="mr-3 self-center whitespace-nowrap text-xl font-normal"> Log out </span>
+						<ArrowLeftToBracketOutline />
+					</Button>
+				</NavLi>
+			{:else}
+				<NavLi href="/signup">Sign Up</NavLi>
+				<NavLi href="/login">Login</NavLi>
+			{/if}
+			<NavLi><DarkMode /></NavLi>
 		</NavUl>
 	</Navbar>
 </nav>
 
-
 <slot />
 
-
-<footer class="fixed bottom-0 right-0 left-0 w-full p-4 bg-white border-t border-gray-200 shadow md:flex md:items-center md:justify-between md:p-6 dark:bg-gray-800 dark:border-gray-600">
+<!-- <footer class="fixed bottom-0 right-0 left-0 w-full p-4 bg-white border-t border-gray-200 shadow md:flex md:items-center md:justify-between md:p-6 dark:bg-gray-800 dark:border-gray-600">
     <div class="mx-auto w-full p-10 py-6 lg:py-1">
         <div class="md:flex md:justify-between">
           <div class="mb-6 md:mb-0">
@@ -125,8 +150,7 @@
           </div>
       </div>
     </div>
-</footer>
-
+</footer> -->
 
 <style>
 </style>

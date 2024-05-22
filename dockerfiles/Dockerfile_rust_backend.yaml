@@ -1,0 +1,30 @@
+# Use the official Rust image as the build environment
+FROM rust:latest as builder
+
+# Create a new empty shell project
+RUN USER=root cargo new --bin sync_draft_be
+WORKDIR /sync_draft_be
+
+# Copy the manifests
+COPY Cargo.toml Cargo.lock ./
+
+# Copy the source code
+COPY src ./src
+
+# Build the application
+RUN cargo build --release
+
+# Use the official Ubuntu image as the runtime environment
+FROM ubuntu:latest
+
+# Install required libraries
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Copy the build artifact from the build stage
+COPY --from=builder /sync_draft_be/target/release/sync_draft_be /usr/local/bin/sync_draft_be
+
+# Expose the port your application runs on
+EXPOSE 3000
+
+# Run the binary
+CMD ["sync_draft_be"]
