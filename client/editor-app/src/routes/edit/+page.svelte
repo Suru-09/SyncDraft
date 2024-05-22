@@ -13,6 +13,8 @@
     export let currentDocumentName: string = '';
     let logootDocument = new LogootDocument();
     let siteId = generateSiteId();
+    let selectedText = '';
+    let previousValue = '';
 
     let colors = ['#FF6666', '#FF9933', '#0000CC', '#B2FF66', '#66FFFF', '#66B2FF', '#9933FF', '#FF99FF', '#C0C0C0', '#00994C'];
 
@@ -21,6 +23,11 @@
         value = target.value;
         $currentEditingDocument.body = value;
         onInputHandler(event);
+    }
+
+    function handleMouseUp(event: any) {
+        const textarea = event.target;
+        selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
     }
 
     function handleDocNameChange(event: Event) {
@@ -80,6 +87,8 @@
             return;
         }
 
+        await closeWEBRTCSession();
+
         // start the session\
         import('$lib/utils/peer').then((peerModule) => {
             peerModule.PeerConnection.startPeerSession().then(async () => {
@@ -138,13 +147,17 @@
     }
 
     const closeWEBRTCSession = async () => {
-        // start the session\
         import('$lib/utils/peer').then((peerModule) => {
             peerModule.PeerConnection.closePeerSession().then(async () => {
                 console.log("WEBRTC session closed");
             });
         });
-        
+
+        await axios.post(`${peerJSServerUrl}/remove-session`, {
+                _id: userInputSessionID
+            }).then((result)=> {
+                console.log(`Session has been removed: ${result.data}`)
+            });   
     }
 
     let onIncomingConnectionCallback = async (conn: any) => {
@@ -152,15 +165,6 @@
         const peerModule = await import('$lib/utils/peer');
         let peerConnection = peerModule.PeerConnection;
         peerConnection.onConnectionReceiveData(conn.peer, onReceiveCallback);
-
-        conn.on('open', () => {
-            try {
-                console.log("Incoming connection for not master : ");
-                console.log(conn.peer);
-            } catch (error) {
-                console.error("Serialization Error: ", error);
-        }
-    });
     };
 
     let onReceiveCallback = async (data: string) => {
@@ -218,6 +222,9 @@
         import('$lib/utils/peer').then(async (peerModule) => {
             let map = peerModule.getConnectionMap();
 
+            console.log("Connection map[broadcastData]: ");
+            console.log(map);
+
             map.forEach((_, peerId) => {
                 peerModule.PeerConnection.sendConnection(peerId, data);
             }); 
@@ -244,6 +251,7 @@
     const connectToNewUsers = async (peerConnections: Array<string>) => {
         console.log(`Connecting to new users: ${peerConnections}`);
         import('$lib/utils/peer').then(async (peerModule) => {
+                peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
                 peerConnections.forEach(async (peerID) => {
                     let currentPeerID = '';
                     const peer = peerModule.PeerConnection.getPeer();
@@ -251,11 +259,9 @@
                     {
                         currentPeerID = peer.id;
                     }
-                    //peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
-                    if (!peerModule.getConnectionMap().get(peerID) &&  peerID !== currentPeerID)
-                    {
-                        peerModule.PeerConnection.connectPeer(peerID).then(async () => {
-                            console.log(`Connecting to user: IDK with WEBRTC_ID: ${peerID}`);
+
+                    if (!peerModule.getConnectionMap().get(peerID) &&  peerID !== currentPeerID) {
+                        await peerModule.PeerConnection.connectPeer(peerID).then(async () => {
                             peerModule.PeerConnection.onConnectionReceiveData(peerID, onReceiveCallback);
                         });
                     }
@@ -293,6 +299,7 @@
     const connectToWebRTCUserList = async (users_list: Array<{"username": "", "webrtc_id": ""}>) => {
         // start peer session first
         return import('$lib/utils/peer').then(async (peerModule) => {
+            peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
             return peerModule.PeerConnection.startPeerSession().then(async (id) => {
                 let logged_username = $loggedUser.username.split('@')[0];
                 if (logged_username)
@@ -317,7 +324,6 @@
                     {
                         currentPeerID = peer.id;
                     }
-                    peerModule.PeerConnection.onIncomingConnection(onIncomingConnectionCallback);
 
                     if(!peerModule.getConnectionMap().get(user.webrtc_id) && currentPeerID !== user.webrtc_id)
                     {
@@ -327,7 +333,6 @@
                             peerModule.PeerConnection.onConnectionReceiveData(user.webrtc_id, onReceiveCallback);
                         });
                     }
-                    
                 });
 
                 await axios.post(`${peerJSServerUrl}/append-user-to-session`, {
@@ -369,32 +374,47 @@
         console.log(`data is ${char}`);
         console.log(`textarea value is ${value}`);
         console.log(`user session id is ${userInputSessionID}`)
+        console.log(`selection start is ${event.target.selectionStart}`)
+        console.log(`selection end is ${event.target.selectionEnd}`)
 
         cursorPosition = event.target.selectionStart;
         console.log(`position is ${cursorPosition}`);
+
+        const textarea = event.target;
+        const currentValue = textarea.value;
+
         if (char != null) {
             let insertOperation = logootDocument.insertAtIndex(siteId, char, cursorPosition);
             console.log(insertOperation);
-            console.log(insertOperation.getJson())
+            console.log(insertOperation.getJson());
             await broadcastData(insertOperation.getJson());
         } else if (event.inputType === 'deleteContentBackward') {
-            let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
-            console.log(deleteOperation);
-            console.log(deleteOperation.getJson())
-            await broadcastData(deleteOperation.getJson());
+            // handle case when selected text is deleted
+            if (currentValue.length < previousValue.length) {
+                const start = textarea.selectionStart;
+                let deletedText = previousValue.slice(start, start + (previousValue.length - currentValue.length));
+                console.log(`deleted text is ${deletedText}`);
+                for(let i = cursorPosition; i < cursorPosition + deletedText.length; i++) {
+                    console.log(`I IS ${i}`);
+                    let deleteOperation = logootDocument.deleteAtIndex(siteId, start);
+                    console.log(deleteOperation);
+                    console.log(deleteOperation.getJson());
+                    await broadcastData(deleteOperation.getJson());
+                } 
+            } else {
+                let deleteOperation = logootDocument.deleteAtIndex(siteId, cursorPosition);
+                console.log(deleteOperation);
+                console.log(deleteOperation.getJson());
+                await broadcastData(deleteOperation.getJson());
+            }
+        } else if (event.inputType === 'insertLineBreak') {
+            let insertOperation = logootDocument.insertAtIndex(siteId, '\n', cursorPosition);
+            console.log(insertOperation);
+            console.log(insertOperation.getJson());
+            await broadcastData(insertOperation.getJson());
         }
-
+        previousValue = currentValue;
         console.log(logootDocument);
-
-        // try {
-        //     const res = await axios.post(`${backendUrl}/edit`, {
-        //         dt: event.data,
-        //         val: textareaValue,
-        //         pos: cursorPosition
-        //     });
-        // } catch (e) {
-        //     console.log(`error: ${e}`);
-        // }
     }
 
     let isTextareaFocused = false;
@@ -406,7 +426,7 @@
     }
 
     let cursors = [
-        {"position": 0, "username": $loggedUser.firstName, "color": getNextColor()},
+        {"position": 0, "username": $loggedUser.username.split("@")[0], "color": getNextColor()},
     ];
 
     function handleTextareaFocus() {
@@ -423,7 +443,7 @@
     function getCursor(event: any) {
         let x = event.clientX;
         let y = event.clientY;
-        let _position = $loggedUser.firstName;
+        let _position = $loggedUser.username.split("@")[0];
 
         let index_x = event.target.selectionEnd;
 
@@ -597,7 +617,7 @@
                 <div id="info"></div>
                 <Textarea id="editor" rows="8" class="mb-4" placeholder="Write something" style="font-size: 16px"
                     on:mouseover={handleTextareaFocus} on:mouseleave={handleTextareaBlur}  on:keypress={getCursor} on:click={getCursor}
-                    bind:value={value} on:input={handleChange}
+                    bind:value={value} on:input={handleChange} on:mouseup={handleMouseUp}
                     >
                 <Toolbar slot="header" embedded>
                     <ToolbarGroup>

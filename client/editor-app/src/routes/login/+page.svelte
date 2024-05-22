@@ -29,9 +29,8 @@
                 $loggedUser.password = response.data.password;
                 $loggedUser.username = response.data.username;
 
-                $usersList = [$loggedUser.firstName];
+                $usersList = [$loggedUser.username.split("@")[0]];
 
-                console.log("WTF");
                 console.log($usersList);
                 
                 // nice to see your documents once you have logged in.

@@ -18,11 +18,11 @@ export const userDocuments = persisted('userDocuments', [{
     "body": "",
 }]);
 
-export const usersList = writable([""]);
+export const usersList = persisted('usersList', [""]);
 
 export const isAnyDocEdited = persisted('isAnyDocEdited',false);
 export const connectedToSession = persisted('connectedToSession',false);
-export const isSessionStarted = persisted('isSessionStarted',false);
+export const isSessionStarted = persisted('isSessionStarted', false);
 
 export const currentEditingDocument = persisted('currentEditingDocument', {
     "_id": "",

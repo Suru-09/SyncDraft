@@ -95,6 +95,18 @@ const removeUserFromSession = (req, res) => {
   
 };
 
+const removeSession = (req, res) => {
+  const sessionID = req.body._id;
+  console.log(sessionID);
+
+  const index = sessions.indexOf((session) => session._id == sessionID);
+  const _ = sessions.splice(index, 1);
+  res.status(200).json({
+    status: "success",
+    message: "Session has been removed"
+  }); 
+};
+
 const getSession = (id) => {
   const sessionID = id;
   console.log(sessionID);
@@ -112,6 +124,7 @@ app.post('/create-session', createSession);
 app.get('/get-users-list', getUsersList);
 app.post('/append-user-to-session', appendUserToSession);
 app.post('/remove-user-from-session', removeUserFromSession);
+app.post('/remove-session', removeSession);
 
 
 const server = app.listen(port, () => {
